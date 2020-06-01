@@ -1,0 +1,16 @@
+{
+  "participant_name": "Core",
+  "config_file_name": "precice-config.xml",
+  "interface": {
+      "coupling_mesh_name": "DirichletNodes",
+      "write_data_name": "Flux",
+      "read_data_name": "Temperature"
+    },
+  "mesh_parameters": {
+      "dimensions": 2,
+      "rho_inner": 0.2,
+      "rho_outer": 0.4,
+      "radial_spacing": 1E-2,
+      "angular_spacing": 0.523598
+  }
+}
