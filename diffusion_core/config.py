@@ -30,7 +30,7 @@ class Config:
         self._rhomin = None
         self._rhomax = None
         self._r_spacing = None
-        self._rho_spacing = None
+        self._rho_points = None
 
         self.read_json(config_filename)
 
@@ -59,7 +59,7 @@ class Config:
         self._rhomin = data["mesh_parameters"]["rho_inner"]
         self._rhomax = data["mesh_parameters"]["rho_outer"]
         self._r_spacing = data["mesh_parameters"]["radial_spacing"]
-        self._rho_spacing = data["mesh_parameters"]["angular_spacing"]
+        self._rho_points = data["mesh_parameters"]["circular_points"]
 
         read_file.close()
 
@@ -90,5 +90,5 @@ class Config:
     def get_r_spacing(self):
         return self._r_spacing
 
-    def get_rho_spacing(self):
-        return self._rho_spacing
+    def get_rho_points(self):
+        return self._rho_points

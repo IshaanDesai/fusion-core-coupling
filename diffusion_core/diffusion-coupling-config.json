@@ -10,7 +10,7 @@
       "dimensions": 2,
       "rho_inner": 0.2,
       "rho_outer": 0.4,
-      "radial_spacing": 1E-2,
-      "angular_spacing": 0.523598
+      "radial_spacing": 2E-2,
+      "circular_points": 500
   }
 }

@@ -11,4 +11,4 @@ setup(name='diffusion_core',
       author="Ishaan Desai",
       author_email='ishaan.desai@tum.de',
       packages=['diffusion_core'],
-      install_requires=['numpy>=1.13.3'])
+      install_requires=['numpy>=1.13.3', 'pyevtk'])
