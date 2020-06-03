@@ -10,7 +10,21 @@
       "dimensions": 2,
       "rho_inner": 0.2,
       "rho_outer": 0.4,
-      "radial_spacing": 2E-2,
+      "radial_spacing": 5E-3,
       "circular_points": 500
+  },
+  "diffusion_parameters": {
+    "coeff_perp": 0.01
+  },
+  "simulation_parameters": {
+      "n_timesteps": 2000,
+      "timestep": 5E-3,
+      "n_output": 200
+  },
+  "init_conditions": {
+      "rb": 0.3,
+      "rho_point": 125,
+      "wrb": 0.02,
+      "wrho_points": 50
   }
 }

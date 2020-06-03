@@ -25,3 +25,5 @@ def write_vtk(field, t, x, y):
 
     gridToVTK("./output/"+filename, x_out, y_out, z_out, pointData={"field": field_out})
 
+    print("VTK output written at t = {}".format(t))
+    print("Field magnitude = {}".format(field.sum()))

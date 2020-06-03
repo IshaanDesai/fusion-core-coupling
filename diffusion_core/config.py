@@ -32,6 +32,16 @@ class Config:
         self._r_spacing = None
         self._rho_points = None
 
+        self._diffc_perp = None
+        self._dt = None
+        self._n_t = None
+        self._n_out = None
+
+        self._rb = None
+        self._rhob = None
+        self._wrb = None
+        self._wrhob = None
+
         self.read_json(config_filename)
 
     def read_json(self, config_filename):
@@ -60,6 +70,16 @@ class Config:
         self._rhomax = data["mesh_parameters"]["rho_outer"]
         self._r_spacing = data["mesh_parameters"]["radial_spacing"]
         self._rho_points = data["mesh_parameters"]["circular_points"]
+
+        self._diffc_perp = data["diffusion_parameters"]["coeff_perp"]
+        self._dt = data["simulation_parameters"]["timestep"]
+        self._n_t = data["simulation_parameters"]["n_timesteps"]
+        self._n_out = data["simulation_parameters"]["n_output"]
+
+        self._rb = data["init_conditions"]["rb"]
+        self._rhob = data["init_conditions"]["rho_point"]
+        self._wrb = data["init_conditions"]["wrb"]
+        self._wrhob = data["init_conditions"]["wrho_points"]
 
         read_file.close()
 
@@ -92,3 +112,27 @@ class Config:
 
     def get_rho_points(self):
         return self._rho_points
+
+    def get_diffusion_coeff(self):
+        return self._diffc_perp
+
+    def get_dt(self):
+        return self._dt
+
+    def get_n_timesteps(self):
+        return self._n_t
+
+    def get_n_output(self):
+        return self._n_out
+
+    def get_rb(self):
+        return self._rb
+
+    def get_rhob(self):
+        return self._rhob
+
+    def get_wrb(self):
+        return self._wrb
+
+    def get_wrhob(self):
+        return self._wrhob

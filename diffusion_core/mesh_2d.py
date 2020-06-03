@@ -37,13 +37,13 @@ class Mesh:
         self._cart_coords = None  # Initialized in create_mesh function
         self._vertex_type = None  # Initialised in create_mesh function
 
-        self._mesh_indices = None  # Initialized in create_mesh function
+        self._mesh_index = None  # Initialized in create_mesh function
         self._mesh_index_of_grid = None  # Initialized in create_mesh function
         self._mesh_index_of_ghost = None  # Initialized in create_mesh function
         self._mesh_i, self._mesh_j = None, None  # Initialized in create_mesh function
 
         self._mesh_count, self._grid_count, self._ghost_count = 0, 0, 0
-        self._nx, self._ny = 0, self._config.get_rho_points
+        self._nx, self._ny = 0, self._config.get_rho_points()
 
         self._create_mesh()
 
@@ -66,7 +66,7 @@ class Mesh:
         self._polar_coords_rho = np.zeros((r_vertices, self._rho_points))
         self._cart_coords_x = np.zeros((r_vertices, self._rho_points))
         self._cart_coords_y = np.zeros((r_vertices, self._rho_points))
-        self._mesh_indices = np.zeros((r_vertices, self._rho_points))
+        self._mesh_index = np.zeros((r_vertices, self._rho_points))
         self._mesh_i = np.zeros(r_vertices*self._rho_points)
         self._mesh_j = np.zeros(r_vertices*self._rho_points)
 
@@ -94,7 +94,7 @@ class Mesh:
                     mesh_index_grid.append(self._mesh_count)
                     self._grid_count += 1
 
-                self._mesh_indices[i, j] = self._mesh_count
+                self._mesh_index[i, j] = self._mesh_count
                 self._mesh_i[self._mesh_count] = i
                 self._mesh_j[self._mesh_count] = j
 
@@ -112,17 +112,19 @@ class Mesh:
     def get_cart_coords(self):
         return self._cart_coords_x, self._cart_coords_y
 
-    def get_polar_r(self, ind_i, ind_j):
-        return self._polar_coords_r[ind_i, ind_j]
+    def get_polar_coords(self):
+        return self._polar_coords_r, self._polar_coords_rho
 
-    def get_polar_rho(self, ind_i, ind_j):
-        return self._polar_coords_rho[ind_i, ind_j]
+    def get_i_j_from_index(self, index):
+        return int(self._mesh_i[index]), int(self._mesh_j[index])
 
-    def get_cart_x(self, ind_i, ind_j):
-        return self._cart_coords_x[ind_i, ind_j]
+    def get_x(self, index):
+        i, j = self.get_i_j_from_index(index)
+        return self._cart_coords_x[i, j]
 
-    def get_cart_y(self, ind_i, ind_j):
-        return self._cart_coords_y[ind_i, ind_j]
+    def get_y(self, index):
+        i, j = self.get_i_j_from_index(index)
+        return self._cart_coords_y[i, j]
 
     def grid_to_mesh_index(self, index):
         return self._mesh_index_of_grid[index]
@@ -142,7 +144,21 @@ class Mesh:
     def get_n_points_axiswise(self):
         return self._nx, self._ny
 
+    def get_point_type(self, ind_i, ind_j):
+        return self._vertex_type[ind_i][ind_j]
+
+    def get_r_spacing(self):
+        return self._r_spacing
+
+    def get_rho_spacing(self):
+        return 2*math.pi / self._rho_points
+
     def get_neighbor_index(self, index, x_dir, y_dir):
-        neigh_i = self._mesh_i[index] + x_dir
-        neigh_j = self._mesh_j[index] + y_dir
-        return self._mesh_indices[neigh_i, neigh_j]
+        neigh_i = int(self._mesh_i[index] + x_dir)
+        neigh_j = int(self._mesh_j[index] + y_dir)
+
+        # Handling periodicity in the angular direction
+        if neigh_j == self._ny:
+            return neigh_i, 0
+        else:
+            return neigh_i, neigh_j
