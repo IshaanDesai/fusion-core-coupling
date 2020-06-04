@@ -162,3 +162,13 @@ class Mesh:
             return neigh_i, 0
         else:
             return neigh_i, neigh_j
+
+    def polar_to_cartesian(self, r, rho):
+        x_coord = r*math.cos(rho)
+        y_coord = r*math.sin(rho)
+        if x_coord < self._r_spacing:
+            x_coord = 0
+        if y_coord < self.get_rho_spacing():
+            y_coord = 0
+
+        return x_coord, y_coord

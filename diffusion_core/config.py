@@ -76,10 +76,10 @@ class Config:
         self._n_t = data["simulation_parameters"]["n_timesteps"]
         self._n_out = data["simulation_parameters"]["n_output"]
 
-        self._rb = data["init_conditions"]["rb"]
-        self._rhob = data["init_conditions"]["rho_point"]
-        self._wrb = data["init_conditions"]["wrb"]
-        self._wrhob = data["init_conditions"]["wrho_points"]
+        self._xb = data["init_conditions"]["xb"]
+        self._yb = data["init_conditions"]["yb"]
+        self._wxb = data["init_conditions"]["wxb"]
+        self._wyb = data["init_conditions"]["wyb"]
 
         read_file.close()
 
@@ -125,14 +125,8 @@ class Config:
     def get_n_output(self):
         return self._n_out
 
-    def get_rb(self):
-        return self._rb
+    def get_xb_yb(self):
+        return self._xb, self._yb
 
-    def get_rhob(self):
-        return self._rhob
-
-    def get_wrb(self):
-        return self._wrb
-
-    def get_wrhob(self):
-        return self._wrhob
+    def get_wxb_wyb(self):
+        return self._wxb, self._wyb

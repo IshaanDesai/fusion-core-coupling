@@ -40,17 +40,14 @@ for i in range(nx):
             u[i, j] = 0
 
 # Initialising Gaussian blob as initial condition of field
-rhob = 2*math.pi / config.get_rhob()
-wrhob = 2*math.pi / config.get_wrhob()
-print("Center of Gaussian blob is at r = {}, rho = {}".format(config.get_rb(), rhob))
-print("Width of Gaussian blob is wr = {}, wrho = {}".format(config.get_wrb(), wrhob))
-
+x_center, y_center = config.get_xb_yb()
+x_width, y_width = config.get_wxb_wyb()
 for l in range(mesh.get_n_points_grid()):
     mesh_ind = mesh.grid_to_mesh_index(l)
     x = mesh.get_x(mesh_ind)
     y = mesh.get_y(mesh_ind)
-    gaussx = gaussian_blob(config.get_rb(), config.get_wrb(), x)
-    gaussy = gaussian_blob(rhob, wrhob, y)
+    gaussx = gaussian_blob(x_center, x_width, x)
+    gaussy = gaussian_blob(y_center, y_width, y)
 
     i, j = mesh.get_i_j_from_index(mesh_ind)
     u[i, j] = gaussx*gaussy
@@ -75,6 +72,7 @@ for n in range(n_t):
         lr_minus_i, lr_minus_j = mesh.get_neighbor_index(mesh_ind, 0, -1)
         lr_plus_i, lr_plus_j = mesh.get_neighbor_index(mesh_ind, 0, 1)
 
+        # 2D second order central difference scheme
         du_perp = (u[lr_minus_i, lr_minus_j] + u[lr_plus_i, lr_plus_j]) / (dr * dr)
         du_perp = du_perp + (u[lrho_minus_i, lrho_minus_j] + u[lrho_plus_i, lrho_plus_j]) / (drho * drho)
         du_perp = du_perp - 2 * u[l_i, l_j] * ((1 / (dr * dr)) + (1 / (drho * drho)))
