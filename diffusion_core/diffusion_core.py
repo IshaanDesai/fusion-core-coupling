@@ -11,10 +11,7 @@ import math
 
 def gaussian_blob(pos, wblob, coord):
     exponent = -1.0*(coord - pos)*(coord - pos) / (wblob*wblob)
-    if math.fabs(exponent) < 1E-10:
-        gaussian = 0.0
-    else:
-        gaussian = math.exp(exponent)
+    gaussian = math.exp(exponent)
     return gaussian
 
 
@@ -25,18 +22,10 @@ config = Config(problem_config_file)
 # Mesh setup
 mesh = Mesh(problem_config_file)
 nx, ny = mesh.get_n_points_axiswise()
-
-print("Cartesian representation of polar mesh is 2D grid [{} x {}]".format(nx, ny))
+rmin, rmax = config.get_rmin(), config.get_rmax()
 
 # Definition of field variable
 u = np.zeros((nx, ny))
-
-# Setup Dirichlet boundary conditions at inner and outer edge of the torus
-for i in range(nx):
-    for j in range(ny):
-        # Point type is a list and not a numpy array so it requires different index accessing
-        if mesh.get_point_type(i, j) == MeshVertexType.GHOST:
-            u[i, j] = 0
 
 # Initialising Gaussian blob as initial condition of field
 x_center, y_center = config.get_xb_yb()
@@ -50,24 +39,34 @@ for l in range(mesh.get_n_points_grid()):
 
     i, j = mesh.get_i_j_from_index(mesh_ind)
     u[i, j] = gaussx*gaussy
+    assert(u[i, j] >= 0), "gaussx = {}, gauss_y = {}, for ({},{})".format(gaussx, gaussx, i, j)
+
+# Setup Dirichlet boundary conditions at inner and outer edge of the torus
+for i in range(nx):
+    for j in range(ny):
+        # Point type is a list and not a numpy array so it requires different index accessing
+        if mesh.get_point_type(i, j) == MeshVertexType.GHOST:
+            u[i, j] = 0
 
 # Write data at initial condition
-write_vtk(u, 0)
+write_vtk(u, mesh, 0)
 
 # Get parameters from config and mesh modules
 diffc_perp = config.get_diffusion_coeff()
+print("Diffusion coefficient = {}".format(diffc_perp))
 dt = config.get_dt()
+print("dt = {}".format(dt))
 n_t, n_out = config.get_n_timesteps(), config.get_n_output()
-dr, drho = mesh.get_r_spacing(), mesh.get_rho_spacing()
+dr, dtheta = mesh.get_r_spacing(), mesh.get_theta_spacing()
 
 # Check the CFL Condition for Diffusion Equation
-d_cfl = 0
-if dr < drho:
-    d_cfl = dr
-elif drho < dr:
-    d_cfl = drho
-print("CFL Coefficient = {}. Must be less than 0.5".format(dt*diffc_perp/(d_cfl*d_cfl)))
-assert(dt*diffc_perp/(d_cfl*d_cfl) < 0.5)
+cfl_r = dt*diffc_perp / (dr*dr)
+print("CFL Coefficient with radial param = {}. Must be less than 0.5".format(cfl_r))
+assert(cfl_r < 0.5)
+
+cfl_theta = dt*diffc_perp / (rmin*rmin*dtheta*dtheta)
+print("CFL Coefficient with theta param = {}. Must be less than 0.5".format(cfl_theta))
+assert(cfl_theta < 0.5)
 
 # Time loop
 for n in range(n_t):
@@ -76,25 +75,27 @@ for n in range(n_t):
         l_i, l_j = mesh.get_i_j_from_index(mesh_ind)
         r = mesh.get_r(mesh_ind)
 
-        lrho_minus_i, lrho_minus_j = mesh.get_neighbor_index(mesh_ind, -1, 0)
-        lrho_plus_i, lrho_plus_j = mesh.get_neighbor_index(mesh_ind, 1, 0)
-        lr_minus_i, lr_minus_j = mesh.get_neighbor_index(mesh_ind, 0, -1)
-        lr_plus_i, lr_plus_j = mesh.get_neighbor_index(mesh_ind, 0, 1)
+        ltheta_minus_i, ltheta_minus_j = mesh.get_neighbor_i_j(mesh_ind, -1, 0)
+        ltheta_plus_i, ltheta_plus_j = mesh.get_neighbor_i_j(mesh_ind, 1, 0)
+        lr_minus_i, lr_minus_j = mesh.get_neighbor_i_j(mesh_ind, 0, -1)
+        lr_plus_i, lr_plus_j = mesh.get_neighbor_i_j(mesh_ind, 0, 1)
 
-        # Second order central difference components in radial direction
-        du_perp = (u[lr_minus_i, lr_minus_j] + u[lr_plus_i, lr_plus_j]) / (dr * dr)
+        rminus_ind, rplus_ind = mesh.get_neighbor_index(mesh_ind, 0, -1), mesh.get_neighbor_index(mesh_ind, 0, 1)
+        rminus, rplus = mesh.get_r(rminus_ind), mesh.get_r(rplus_ind)
+        rplus_half, rminus_half = (rplus + r) / 2, (rminus + r) / 2
+
+        # Staggered scheme to evaluate derivatives in radial direction
+        du_perp = (rplus_half*(u[lr_plus_i, lr_plus_j] - u[l_i, l_j]) / dr - rminus_half*(u[lr_minus_i, lr_minus_j] - u[l_i, l_j]) / dr) / (r*dr)
+
         # Second order central difference components in theta direction
-        du_perp = du_perp + (u[lrho_minus_i, lrho_minus_j] + u[lrho_plus_i, lrho_plus_j]) / (r * r * drho * drho)
-        # First order forward difference components in radial direction
-        du_perp = du_perp + u[lrho_plus_i, lrho_plus_j] / (r * dr)
-        # All remaining terms consisting of current point
-        du_perp = du_perp - u[l_i, l_j] * ((2 / (dr * dr)) + (2 / (r * r * drho * drho)) + (1 / (r * dr)))
+        du_perp += (u[ltheta_minus_i, ltheta_minus_j] + u[ltheta_plus_i, ltheta_plus_j] - 2*u[l_i, l_j]) / (r*r*dtheta*dtheta)
+
         du_perp = du_perp*dt*diffc_perp
 
         u[l_i, l_j] += du_perp
 
     if n % n_out == 0:
-        write_vtk(u, n)
+        write_vtk(u, mesh, n)
 
     n += 1
 

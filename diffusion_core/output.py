@@ -5,14 +5,11 @@ For the VTK export the following package is used: https://github.com/paulo-herre
 
 from pyevtk.hl import gridToVTK
 import numpy as np
-from mesh_2d import Mesh, MeshVertexType
+from mesh_2d import MeshVertexType
 
 
-def write_vtk(field, t):
+def write_vtk(field, mesh, t):
     filename = "field_out_{}".format(t)
-    problem_config_file = "diffusion-coupling-config.json"
-    mesh = Mesh(problem_config_file)
-
     nx, ny = mesh.get_n_points_axiswise()
     nz = 1
     x_out = np.zeros((nx, ny, nz))
@@ -20,6 +17,9 @@ def write_vtk(field, t):
     z_out = np.zeros((nx, ny, nz))
     point_type = np.zeros((nx, ny, nz))
     field_out = np.zeros((nx, ny, nz))
+
+    print("Writing VTK output at t = {}".format(t))
+    print("Field magnitude = {}".format(field.sum()))
 
     counter = 0
     for i in range(nx):
@@ -36,5 +36,4 @@ def write_vtk(field, t):
 
     gridToVTK("./output/"+filename, x_out, y_out, z_out, pointData={"field": field_out, "type": point_type})
 
-    print("VTK output written at t = {}".format(t))
-    print("Field magnitude = {}".format(field.sum()))
+
