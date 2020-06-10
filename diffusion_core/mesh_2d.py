@@ -109,12 +109,6 @@ class Mesh:
         self._mesh_index_of_grid = np.array(mesh_index_grid)
         self._mesh_index_of_ghost = np.array(mesh_index_ghost)
 
-    def get_cart_coords(self):
-        return self._cart_coords_x, self._cart_coords_y
-
-    def get_polar_coords(self):
-        return self._polar_coords_r, self._polar_coords_rho
-
     def get_i_j_from_index(self, index):
         return int(self._mesh_i[index]), int(self._mesh_j[index])
 
@@ -125,6 +119,14 @@ class Mesh:
     def get_y(self, index):
         i, j = self.get_i_j_from_index(index)
         return self._cart_coords_y[i, j]
+
+    def get_r(self, index):
+        i, j = self.get_i_j_from_index(index)
+        return self._polar_coords_r[i, j]
+
+    def get_rho(self, index):
+        i, j = self.get_i_j_from_index(index)
+        return self._polar_coords_rho[i, j]
 
     def grid_to_mesh_index(self, index):
         return self._mesh_index_of_grid[index]
@@ -158,8 +160,10 @@ class Mesh:
         neigh_j = int(self._mesh_j[index] + y_dir)
 
         # Handling periodicity in the angular direction
-        if neigh_j == self._ny:
+        if neigh_j >= self._ny:
             return neigh_i, 0
+        elif neigh_j <= 0:
+            return neigh_i, self._ny-1
         else:
             return neigh_i, neigh_j
 

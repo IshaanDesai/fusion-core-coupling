@@ -8,8 +8,8 @@
     },
   "mesh_parameters": {
       "dimensions": 2,
-      "rho_inner": 0.2,
-      "rho_outer": 0.4,
+      "rho_inner": 0.01,
+      "rho_outer": 0.2185,
       "radial_spacing": 5E-3,
       "circular_points": 500
   },
@@ -17,14 +17,14 @@
     "coeff_perp": 0.01
   },
   "simulation_parameters": {
-      "n_timesteps": 2000,
-      "timestep": 5E-3,
-      "n_output": 200
+      "n_timesteps": 200,
+      "timestep": 5E-4,
+      "n_output": 20
   },
   "init_conditions": {
-      "rb": 0.3,
-      "rho_point": 125,
-      "wrb": 0.02,
-      "wrho_points": 50
+      "xb": 0.001,
+      "yb": 0.1,
+      "wxb": 0.05,
+      "wyb": 0.05
   }
 }
