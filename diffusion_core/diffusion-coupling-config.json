@@ -8,22 +8,22 @@
     },
   "mesh_parameters": {
       "dimensions": 2,
-      "r_inner": 0.05,
-      "r_outer": 0.15,
+      "r_inner": 0.2,
+      "r_outer": 0.5,
       "radial_spacing": 5E-3,
       "circular_points": 200
   },
   "diffusion_parameters": {
-    "coeff_perp": 0.002
+    "coeff_perp": 0.01
   },
   "simulation_parameters": {
-      "n_timesteps": 10000,
-      "timestep": 2E-5,
-      "n_output": 1000
+      "n_timesteps": 100000,
+      "timestep": 1E-5,
+      "n_output": 10000
   },
   "init_conditions": {
       "xb": 0.0,
-      "yb": 0.1,
+      "yb": 0.35,
       "wxb": 0.05,
       "wyb": 0.05
   }

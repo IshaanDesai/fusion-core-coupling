@@ -10,20 +10,20 @@ from mesh_2d import MeshVertexType
 
 def write_vtk(field, mesh, t):
     filename = "field_out_{}".format(t)
-    nx, ny = mesh.get_n_points_axiswise()
+    nr, ntheta = mesh.get_n_points_axiswise()
     nz = 1
-    x_out = np.zeros((nx, ny, nz))
-    y_out = np.zeros((nx, ny, nz))
-    z_out = np.zeros((nx, ny, nz))
-    point_type = np.zeros((nx, ny, nz))
-    field_out = np.zeros((nx, ny, nz))
+    x_out = np.zeros((nr, ntheta, nz))
+    y_out = np.zeros((nr, ntheta, nz))
+    z_out = np.zeros((nr, ntheta, nz))
+    point_type = np.zeros((nr, ntheta, nz))
+    field_out = np.zeros((nr, ntheta, nz))
 
     print("Writing VTK output at t = {}".format(t))
     print("Field magnitude = {}".format(field.sum()))
 
     counter = 0
-    for i in range(nx):
-        for j in range(ny):
+    for i in range(nr):
+        for j in range(ntheta):
             x_out[i, j, 0] = mesh.get_x(counter)
             y_out[i, j, 0] = mesh.get_y(counter)
             z_out[i, j, 0] = 0

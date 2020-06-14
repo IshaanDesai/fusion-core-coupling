@@ -6,6 +6,7 @@ import numpy as np
 from mesh_2d import Mesh, MeshVertexType
 from output import write_vtk
 from config import Config
+from boundary import set_bnd_vals
 import math
 
 
@@ -43,11 +44,8 @@ for l in range(mesh.get_n_points_grid()):
     u[i, j] = gaussx*gaussy
 
 # Setup Dirichlet boundary conditions at inner and outer edge of the torus
-for i in range(nr):
-    for j in range(1, ntheta+1):
-        # Point type is a list and not a numpy array so it requires different index accessing
-        if mesh.get_point_type(i, j-1) == MeshVertexType.GHOST:
-            u[i, j] = 0
+bnd_vals = np.zeros(mesh.get_n_points_ghost())
+set_bnd_vals(mesh, bnd_vals, u)
 
 # Get parameters from config and mesh modules
 diffc_perp = config.get_diffusion_coeff()
@@ -75,19 +73,21 @@ print("CFL Coefficient with theta param = {}. Must be less than 0.5".format(cfl_
 assert(cfl_theta < 0.5)
 
 # Calculate radius values at each grid point
-r_val = np.zeros((nr, ntheta+2))
-for i in range(nr):
+r_val = np.zeros((nr, ntheta+2, 3))
+for i in range(1, nr-1):
     for j in range(1, ntheta+1):
         mesh_ind = mesh.get_index_from_i_j(i, j-1)
-        r_val[i, j] = mesh.get_r(mesh_ind)
-r_val[:, 0] = r_val[:, 1]
-r_val[:, ntheta+1] = r_val[:, ntheta]
+        ind_minus = mesh.get_index_from_i_j(i-1, j-1)
+        ind_plus = mesh.get_index_from_i_j(i+1, j-1)
+        # r_(i,j) value
+        r_val[i, j, 0] = mesh.get_r(mesh_ind)
+        # r_(i-1/2,j) value
+        r_val[i, j, 1] = (mesh.get_r(mesh_ind) + mesh.get_r(ind_minus)) / 2
+        # r_(i+1/2,j) value
+        r_val[i, j, 2] = (mesh.get_r(mesh_ind) + mesh.get_r(ind_plus)) / 2
 
 # Time loop
 for n in range(n_t):
-    if n % n_out == 0:
-        write_vtk(u_out, mesh, n)
-
     # Assign values to ghost cells for periodicity in theta direction
     u[:, 0] = u[:, ntheta]
     u[:, ntheta+1] = u[:, 1]
@@ -96,17 +96,20 @@ for n in range(n_t):
     for i in range(1, nr-1):
         for j in range(1, ntheta+1):
             # Staggered grid scheme to evaluate derivatives in radial direction
-            du_perp = (r_val[i+1, j]*(u[i+1, j] - u[i, j]) / dr - r_val[i-1, j]*(u[i, j] - u[i-1, j]) / dr) / (r_val[i, j]*dr)
+            du_perp = (r_val[i, j, 2]*(u[i+1, j] - u[i, j]) - r_val[i, j, 1]*(u[i, j] - u[i-1, j])) / (r_val[i, j, 0]*dr*dr)
 
             # Second order central difference components in theta direction
-            du_perp += (u[i, j-1] + u[i, j+1] - 2*u[i, j]) / (r_val[i, j]*r_val[i, j]*dtheta[i]*dtheta[i])
+            du_perp += (u[i, j-1] + u[i, j+1] - 2*u[i, j]) / (r_val[i, j, 0]*r_val[i, j, 0]*dtheta[i]*dtheta[i])
 
             du_perp = du_perp*dt*diffc_perp
             u[i, j] += du_perp
             u_out[i, j-1] = u[i, j]
 
-    n += 1
-    if n % 100 == 0:
+    if n % n_out == 0:
+        write_vtk(u_out, mesh, n)
+    if n % 1000 == 0:
         print("Elapsed time = {}. Field sum = {}".format(n*dt, u_out.sum()))
+
+    n += 1
 
 # End
