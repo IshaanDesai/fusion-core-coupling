@@ -3,7 +3,7 @@ Module to setup 2D mesh in polar coordinate system
 """
 import numpy as np
 import math
-from config import Config
+from .config import Config
 import enum
 
 

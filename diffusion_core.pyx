@@ -1,11 +1,14 @@
 """
 Code to simulate diffusion in a polar coordinate system replicating a gyrokinetics fusion code (reactor core physics)
 """
+
 import numpy as np
-from mesh_2d import Mesh, MeshVertexType
-from output import write_vtk
-from config import Config
-from boundary import set_bnd_vals
+cimport numpy as np
+cimport cython
+from modules.mesh_2d import Mesh, MeshVertexType
+from modules.output import write_vtk
+from modules.config import Config
+from modules.boundary import set_bnd_vals
 import math
 import time
 
@@ -38,9 +41,10 @@ class Diffusion:
         rmin, rmax = config.get_rmin(), config.get_rmax()
 
         # Definition of field variable
-        u = np.zeros((nr, ntheta + 2))
+        u_numpy = np.zeros((nr, ntheta + 2), dtype=np.double)
+        cdef double [:, :] u = u_numpy
         # Copy of field variable for output and post-processing
-        u_out = np.zeros((nr, ntheta))
+        cdef np.ndarray[double, ndim=2] u_out = np.zeros((nr, ntheta), dtype=np.double)
 
         # Initialising Gaussian blob as initial condition of field
         x_center, y_center = config.get_xb_yb()
@@ -62,13 +66,14 @@ class Diffusion:
         # Get parameters from config and mesh modules
         diffc_perp = config.get_diffusion_coeff()
         print("Diffusion coefficient = {}".format(diffc_perp))
-        dt = config.get_dt()
+        cdef double dt = config.get_dt()
         print("dt = {}".format(dt))
         n_t, n_out = config.get_n_timesteps(), config.get_n_output()
-        dr = mesh.get_r_spacing()
+        cdef double dr = mesh.get_r_spacing()
 
         # Calculate d_theta (spacing in theta direction)
-        dtheta = np.zeros(nr)
+        dtheta_numpy = np.zeros(nr, dtype=np.double)
+        cdef double [:] dtheta = dtheta_numpy
         r_c = rmin - dr
         for k in range(nr):
             dtheta[k] = mesh.get_theta_spacing(r_c)
@@ -78,14 +83,18 @@ class Diffusion:
         # Check the CFL Condition for Diffusion Equation
         cfl_r = dt * diffc_perp / (dr * dr)
         print("CFL Coefficient with radial param = {}. Must be less than 0.5".format(cfl_r))
-        assert (cfl_r < 0.5)
-
         cfl_theta = dt * diffc_perp / (rmin * rmin * np.amin(dtheta) * np.mean(dtheta))
         print("CFL Coefficient with theta param = {}. Must be less than 0.5".format(cfl_theta))
+        assert (cfl_r < 0.5)
         assert (cfl_theta < 0.5)
 
         # Calculate radius values at each grid point
-        r_self, r_minus, r_plus = np.zeros((nr, ntheta + 2)), np.zeros((nr, ntheta + 2)), np.zeros((nr, ntheta + 2))
+        r_self_numpy = np.zeros((nr, ntheta + 2), dtype=np.double)
+        cdef double [:, :] r_self = r_self_numpy
+        r_minus_numpy = np.zeros((nr, ntheta + 2), dtype=np.double)
+        cdef double [:, :] r_minus = r_minus_numpy
+        r_plus_numpy = np.zeros((nr, ntheta + 2), dtype=np.double)
+        cdef double [:, :] r_plus = r_plus_numpy
         for i in range(1, nr - 1):
             for j in range(1, ntheta + 1):
                 mesh_ind = mesh.get_index_from_i_j(i, j - 1)
@@ -99,16 +108,18 @@ class Diffusion:
                 r_plus[i, j] = (mesh.get_r(mesh_ind) + mesh.get_r(ind_plus)) / 2
 
         # Time loop
+        cdef double du_perp = 0.0
         for n in range(n_t):
             # Assign values to ghost cells for periodicity in theta direction
             u[:, 0] = u[:, ntheta]
             u[:, ntheta + 1] = u[:, 1]
+            du_perp = 0.0
 
             # Iterate over all grid points in a Cartesian grid fashion
             for i in range(1, nr - 1):
                 for j in range(1, ntheta + 1):
                     # Staggered grid scheme to evaluate derivatives in radial direction
-                    du_perp = (r_plus[i, j] * (u[i + 1, j] - u[i, j]) - r_minus[i, j] * (u[i, j] - u[i - 1, j])) / (
+                    du_perp += (r_plus[i, j] * (u[i + 1, j] - u[i, j]) - r_minus[i, j] * (u[i, j] - u[i - 1, j])) / (
                                 r_self[i, j] * dr * dr)
 
                     # Second order central difference components in theta direction

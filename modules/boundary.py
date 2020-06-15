@@ -3,7 +3,7 @@ This module implements boundary conditions on the ghost points of a given mesh.
 Dirichlet and Neumann boundary conditions can be implemented.
 For Neumann boundary conditions, the flux normal is in the inward directions (towards the center of polar grid).
 """
-from mesh_2d import MeshVertexType
+from .mesh_2d import MeshVertexType
 import enum
 
 

@@ -5,7 +5,7 @@ For the VTK export the following package is used: https://github.com/paulo-herre
 
 from pyevtk.hl import gridToVTK
 import numpy as np
-from mesh_2d import MeshVertexType
+from .mesh_2d import MeshVertexType
 
 
 def write_vtk(field, mesh, t):
