@@ -21,7 +21,6 @@ class Mesh:
     """
     def __init__(self, config_file_name='polar_code_config.json'):
         """
-
         :param config_file_name:
         """
 

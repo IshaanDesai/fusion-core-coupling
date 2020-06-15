@@ -19,7 +19,6 @@ def write_vtk(field, mesh, t):
     field_out = np.zeros((nr, ntheta, nz))
 
     print("Writing VTK output at t = {}".format(t))
-    print("Field magnitude = {}".format(field.sum()))
 
     counter = 0
     for i in range(nr):
