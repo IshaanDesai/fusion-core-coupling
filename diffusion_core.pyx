@@ -35,6 +35,9 @@ class Diffusion:
         problem_config_file = "diffusion-coupling-config.json"
         config = Config(problem_config_file)
 
+        # Iterators
+        cdef Py_ssize_t i, j
+
         # Mesh setup
         mesh = Mesh(problem_config_file)
         nr, ntheta = mesh.get_n_points_axiswise()
@@ -42,7 +45,7 @@ class Diffusion:
 
         # Definition of field variable
         u_numpy = np.zeros((nr, ntheta + 2), dtype=np.double)
-        cdef double [:, :] u = u_numpy
+        cdef double [:, ::1] u = u_numpy
         # Copy of field variable for output and post-processing
         cdef np.ndarray[double, ndim=2] u_out = np.zeros((nr, ntheta), dtype=np.double)
 
@@ -73,7 +76,7 @@ class Diffusion:
 
         # Calculate d_theta (spacing in theta direction)
         dtheta_numpy = np.zeros(nr, dtype=np.double)
-        cdef double [:] dtheta = dtheta_numpy
+        cdef double [::1] dtheta = dtheta_numpy
         r_c = rmin - dr
         for k in range(nr):
             dtheta[k] = mesh.get_theta_spacing(r_c)
@@ -90,11 +93,11 @@ class Diffusion:
 
         # Calculate radius values at each grid point
         r_self_numpy = np.zeros((nr, ntheta + 2), dtype=np.double)
-        cdef double [:, :] r_self = r_self_numpy
+        cdef double [:, ::1] r_self = r_self_numpy
         r_minus_numpy = np.zeros((nr, ntheta + 2), dtype=np.double)
-        cdef double [:, :] r_minus = r_minus_numpy
+        cdef double [:, ::1] r_minus = r_minus_numpy
         r_plus_numpy = np.zeros((nr, ntheta + 2), dtype=np.double)
-        cdef double [:, :] r_plus = r_plus_numpy
+        cdef double [:, ::1] r_plus = r_plus_numpy
         for i in range(1, nr - 1):
             for j in range(1, ntheta + 1):
                 mesh_ind = mesh.get_index_from_i_j(i, j - 1)
@@ -103,27 +106,29 @@ class Diffusion:
                 # r_(i,j) value
                 r_self[i, j] = mesh.get_r(mesh_ind)
                 # r_(i-1/2,j) value
-                r_minus[i, j] = (mesh.get_r(mesh_ind) + mesh.get_r(ind_minus)) / 2
+                r_minus[i, j] = (mesh.get_r(mesh_ind) + mesh.get_r(ind_minus)) / 2.0
                 # r_(i+1/2,j) value
-                r_plus[i, j] = (mesh.get_r(mesh_ind) + mesh.get_r(ind_plus)) / 2
+                r_plus[i, j] = (mesh.get_r(mesh_ind) + mesh.get_r(ind_plus)) / 2.0
 
         # Time loop
-        cdef double du_perp = 0.0
+        cdef double du_perp
         for n in range(n_t):
             # Assign values to ghost cells for periodicity in theta direction
-            u[:, 0] = u[:, ntheta]
-            u[:, ntheta + 1] = u[:, 1]
-            du_perp = 0.0
+            for i in range(nr):
+                u[i, 0] = u[i, ntheta]
+                u[i, ntheta + 1] = u[i, 1]
 
             # Iterate over all grid points in a Cartesian grid fashion
             for i in range(1, nr - 1):
                 for j in range(1, ntheta + 1):
+                    du_perp = 0.0
+
                     # Staggered grid scheme to evaluate derivatives in radial direction
                     du_perp += (r_plus[i, j] * (u[i + 1, j] - u[i, j]) - r_minus[i, j] * (u[i, j] - u[i - 1, j])) / (
-                                r_self[i, j] * dr * dr)
+                               r_self[i, j] * dr * dr)
 
                     # Second order central difference components in theta direction
-                    du_perp += (u[i, j - 1] + u[i, j + 1] - 2 * u[i, j]) / (r_self[i, j] * r_self[i, j] * dtheta[i] * dtheta[i])
+                    du_perp += (u[i, j + (-1)] + u[i, j + 1] - 2 * u[i, j]) / (r_self[i, j] * r_self[i, j] * dtheta[i] * dtheta[i])
 
                     u[i, j] += du_perp * dt * diffc_perp
                     u_out[i, j - 1] = u[i, j]
@@ -133,5 +138,5 @@ class Diffusion:
                 print("Elapsed time = {}  || Field sum = {}".format(n * dt, u_out.sum()))
                 print("Elapsed CPU time = {}".format(time.clock()))
 
-        print("CPU time = {}".format(time.clock()))
+        print("Total CPU time = {}".format(time.clock()))
         # End
