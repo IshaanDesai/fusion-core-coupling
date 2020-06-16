@@ -1,4 +1,4 @@
-## Polar Coordinate System 
+## Polar Coordinate System Code to solve 2D Diffusion Equation 
 Contact: Ishaan Desai (*ishaan.desai@tum.de*)
 
 ### Compile Cython code

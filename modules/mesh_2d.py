@@ -151,15 +151,3 @@ class Mesh:
     def get_r_spacing(self):
         return self._r_spacing
 
-    def get_theta_spacing(self, radius):
-        return 2*math.pi*radius / (2*self._theta_points)
-
-    def polar_to_cartesian(self, r, rho):
-        x_coord = r*math.cos(rho)
-        y_coord = r*math.sin(rho)
-        if x_coord < self._r_spacing:
-            x_coord = 0
-        if y_coord < self.get_theta_spacing(r):
-            y_coord = 0
-
-        return x_coord, y_coord

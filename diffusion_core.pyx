@@ -72,24 +72,9 @@ class Diffusion:
         cdef double dt = config.get_dt()
         print("dt = {}".format(dt))
         n_t, n_out = config.get_n_timesteps(), config.get_n_output()
+
         cdef double dr = mesh.get_r_spacing()
-
-        # Calculate d_theta (spacing in theta direction)
-        dtheta_numpy = np.zeros(nr, dtype=np.double)
-        cdef double [::1] dtheta = dtheta_numpy
-        r_c = rmin - dr
-        for k in range(nr):
-            dtheta[k] = mesh.get_theta_spacing(r_c)
-            r_c += dr
-        assert (rmax < r_c < rmax + 2 * dr), "theta spacing does not match mesh geometry"
-
-        # Check the CFL Condition for Diffusion Equation
-        cfl_r = dt * diffc_perp / (dr * dr)
-        print("CFL Coefficient with radial param = {}. Must be less than 0.5".format(cfl_r))
-        cfl_theta = dt * diffc_perp / (rmin * rmin * np.amin(dtheta) * np.mean(dtheta))
-        print("CFL Coefficient with theta param = {}. Must be less than 0.5".format(cfl_theta))
-        assert (cfl_r < 0.5)
-        assert (cfl_theta < 0.5)
+        cdef double dtheta = 2 * math.pi / config.get_theta_points()
 
         # Calculate radius values at each grid point
         r_self_numpy = np.zeros((nr, ntheta + 2), dtype=np.double)
@@ -110,6 +95,14 @@ class Diffusion:
                 # r_(i+1/2,j) value
                 r_plus[i, j] = (mesh.get_r(mesh_ind) + mesh.get_r(ind_plus)) / 2.0
 
+        # Check the CFL Condition for Diffusion Equation
+        cfl_r = dt * diffc_perp / (dr * dr)
+        print("CFL Coefficient with radial param = {}. Must be less than 0.5".format(cfl_r))
+        cfl_theta = dt * diffc_perp / (np.mean(r_self) * np.mean(r_self) * dtheta * dtheta)
+        print("CFL Coefficient with theta param = {}. Must be less than 0.5".format(cfl_theta))
+        assert (cfl_r < 0.5)
+        assert (cfl_theta < 0.5)
+
         # Time loop
         cdef double du_perp
         for n in range(n_t):
@@ -128,7 +121,7 @@ class Diffusion:
                                r_self[i, j] * dr * dr)
 
                     # Second order central difference components in theta direction
-                    du_perp += (u[i, j + (-1)] + u[i, j + 1] - 2 * u[i, j]) / (r_self[i, j] * r_self[i, j] * dtheta[i] * dtheta[i])
+                    du_perp += (u[i, j - 1] + u[i, j + 1] - 2 * u[i, j]) / (r_self[i, j] * r_self[i, j] * dtheta * dtheta)
 
                     u[i, j] += du_perp * dt * diffc_perp
                     u_out[i, j - 1] = u[i, j]
