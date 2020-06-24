@@ -56,6 +56,7 @@ class Mesh:
         self._r_points = int(round(r_v)) + 2
 
         print("r_points = {}, theta_points = {}".format(self._r_points, self._theta_points))
+        print("r_spacing = {}, theta_spacing = {}".format(self._r_spacing, theta_spacing))
         print("Polar mesh has {} points".format(self._r_points*self._theta_points))
 
         self._polar_coords_r = np.zeros((self._r_points, self._theta_points))

@@ -9,21 +9,9 @@ from modules.mesh_2d import Mesh, MeshVertexType
 from modules.output import write_vtk
 from modules.config import Config
 from modules.boundary import set_bnd_vals
+from modules.initialization import gaussian_blob, init_mms
 import math
 import time
-
-
-def gaussian_blob(pos, wblob, coord):
-    """
-    Function to define a Gaussian blob as initial state of a Diffusion problem
-    :param pos:
-    :param wblob:
-    :param coord:
-    :return:
-    """
-    exponent = -1.0 * (coord - pos) * (coord - pos) / (wblob * wblob)
-    gaussian = math.exp(exponent)
-    return gaussian
 
 
 class Diffusion:
@@ -46,21 +34,28 @@ class Diffusion:
         # Definition of field variable
         u_numpy = np.zeros((nr, ntheta + 2), dtype=np.double)
         cdef double [:, ::1] u = u_numpy
-        # Copy of field variable for output and post-processing
-        cdef np.ndarray[double, ndim=2] u_out = np.zeros((nr, ntheta), dtype=np.double)
 
-        # Initialising Gaussian blob as initial condition of field
-        x_center, y_center = config.get_xb_yb()
-        x_width, y_width = config.get_wxb_wyb()
-        for l in range(mesh.get_n_points_grid()):
+        # Initializing Gaussian blob as initial condition of field
+        # x_center, y_center = config.get_xb_yb()
+        # x_width, y_width = config.get_wxb_wyb()
+        # for l in range(mesh.get_n_points_grid()):
+        #     mesh_ind = mesh.grid_to_mesh_index(l)
+        #     x = mesh.get_x(mesh_ind)
+        #     y = mesh.get_y(mesh_ind)
+        #     gaussx = gaussian_blob(x_center, x_width, x)
+        #     gaussy = gaussian_blob(y_center, y_width, y)
+
+        #     i, j = mesh.get_i_j_from_index(mesh_ind)
+        #     u[i, j] = gaussx * gaussy
+
+        # Initializing custom initial state for MMS analysis
+        for l in range(mesh.get_n_points_grid):
             mesh_ind = mesh.grid_to_mesh_index(l)
-            x = mesh.get_x(mesh_ind)
-            y = mesh.get_y(mesh_ind)
-            gaussx = gaussian_blob(x_center, x_width, x)
-            gaussy = gaussian_blob(y_center, y_width, y)
+            radialp = mesh.get_r(mesh_ind)
+            thetap = mesh.get_theta(mesh_ind)
 
             i, j = mesh.get_i_j_from_index(mesh_ind)
-            u[i, j] = gaussx * gaussy
+            u[i, j] = init_mms(rmin, rmax, radialp, thetap)
 
         # Setup Dirichlet boundary conditions at inner and outer edge of the torus
         bnd_vals = np.zeros(mesh.get_n_points_ghost())
@@ -104,7 +99,7 @@ class Diffusion:
         assert (cfl_theta < 0.5)
 
         # Time loop
-        cdef double du_perp
+        cdef double du_perp, u_sum
         for n in range(n_t):
             # Assign values to ghost cells for periodicity in theta direction
             for i in range(nr):
@@ -124,11 +119,15 @@ class Diffusion:
                     du_perp += (u[i, j - 1] + u[i, j + 1] - 2 * u[i, j]) / (r_self[i, j] * r_self[i, j] * dtheta * dtheta)
 
                     u[i, j] += du_perp * dt * diffc_perp
-                    u_out[i, j - 1] = u[i, j]
 
             if n % n_out == 0:
-                write_vtk(u_out, mesh, n)
-                print("Elapsed time = {}  || Field sum = {}".format(n * dt, u_out.sum()))
+                write_vtk(u, mesh, n)
+                u_sum = 0
+                for i in range(nr):
+                    for j in range(1, ntheta + 1):
+                        u_sum += u[i, j]
+
+                print("Elapsed time = {}  || Field sum = {}".format(n * dt, u_sum/(nr*ntheta)))
                 print("Elapsed CPU time = {}".format(time.clock()))
 
         print("Total CPU time = {}".format(time.clock()))
