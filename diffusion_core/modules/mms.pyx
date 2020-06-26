@@ -70,13 +70,13 @@ cdef class MMS:
         :return:
         """
         error_abs, mms_sum = 0, 0
-        for i in range(1, self._nr - 1):
+        for i in range(1, self.nr - 1):
             for j in range(1, self.ntheta + 1):
                 mesh_ind = mesh.get_index_from_i_j(i, j - 1)
                 r = mesh.get_r(mesh_ind)
                 theta = mesh.get_theta(mesh_ind)
-                error_abs += abs(field[i, j] - self.analytical_soln(r, theta, t))**2 * r * self._dr * self._dtheta
-                mms_sum += self.analytical_soln(r, theta, t)**2 * r * self._dr * self._dtheta
+                error_abs += abs(field[i, j] - self.analytical_soln(r, theta, t))**2 * r * self.dr * self.dtheta
+                mms_sum += self.analytical_soln(r, theta, t)**2 * r * self.dr * self.dtheta
 
         return error_abs/mms_sum
 

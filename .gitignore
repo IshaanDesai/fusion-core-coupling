@@ -1,5 +1,7 @@
 output/*
-diffusion_core.c
-diffusion_core.cpython-36m-x86_64-linux-gnu.so
+diffusion_core/*.c
+diffusion_core/*.cpython-36m-x86_64-linux-gnu.so
 .idea/
 build/
+diffusion_core/modules/*.cpython-36m-x86_64-linux-gnu.so
+diffusion_core/modules/*.c
