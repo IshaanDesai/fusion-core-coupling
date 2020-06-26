@@ -5,11 +5,12 @@ Code to simulate diffusion in a polar coordinate system replicating a gyrokineti
 import numpy as np
 cimport numpy as np
 cimport cython
-from modules.mesh_2d import Mesh, MeshVertexType
-from modules.output import write_vtk
-from modules.config import Config
-from modules.boundary import set_bnd_vals
-from modules.initialization import gaussian_blob, init_mms
+from diffusion_core.modules.mesh_2d import Mesh, MeshVertexType
+from diffusion_core.modules.output import write_vtk
+from diffusion_core.modules.config import Config
+from diffusion_core.modules.boundary import set_bnd_vals
+from diffusion_core.modules.initialization import gaussian_blob
+from diffusion_core.modules.mms cimport MMS
 import math
 import time
 
@@ -31,6 +32,9 @@ class Diffusion:
         nr, ntheta = mesh.get_n_points_axiswise()
         rmin, rmax = config.get_rmin(), config.get_rmax()
 
+        # Create MMS module object
+        mms = MMS(config, mesh)
+
         # Definition of field variable
         u_numpy = np.zeros((nr, ntheta + 2), dtype=np.double)
         cdef double [:, ::1] u = u_numpy
@@ -49,13 +53,13 @@ class Diffusion:
         #     u[i, j] = gaussx * gaussy
 
         # Initializing custom initial state for MMS analysis
-        for l in range(mesh.get_n_points_grid):
+        for l in range(mesh.get_n_points_grid()):
             mesh_ind = mesh.grid_to_mesh_index(l)
             radialp = mesh.get_r(mesh_ind)
             thetap = mesh.get_theta(mesh_ind)
 
             i, j = mesh.get_i_j_from_index(mesh_ind)
-            u[i, j] = init_mms(rmin, rmax, radialp, thetap)
+            u[i, j] = mms.init_mms(radialp, thetap)
 
         # Setup Dirichlet boundary conditions at inner and outer edge of the torus
         bnd_vals = np.zeros(mesh.get_n_points_ghost())
@@ -71,13 +75,17 @@ class Diffusion:
         cdef double dr = mesh.get_r_spacing()
         cdef double dtheta = 2 * math.pi / config.get_theta_points()
 
-        # Calculate radius values at each grid point
+        # Calculate radius and theta values at each grid point
         r_self_numpy = np.zeros((nr, ntheta + 2), dtype=np.double)
         cdef double [:, ::1] r_self = r_self_numpy
         r_minus_numpy = np.zeros((nr, ntheta + 2), dtype=np.double)
         cdef double [:, ::1] r_minus = r_minus_numpy
         r_plus_numpy = np.zeros((nr, ntheta + 2), dtype=np.double)
         cdef double [:, ::1] r_plus = r_plus_numpy
+
+        theta_self_numpy = np.zeros((nr, ntheta + 2), dtype=np.double)
+        cdef double [:, ::1] theta_self = theta_self_numpy
+
         for i in range(1, nr - 1):
             for j in range(1, ntheta + 1):
                 mesh_ind = mesh.get_index_from_i_j(i, j - 1)
@@ -89,6 +97,8 @@ class Diffusion:
                 r_minus[i, j] = (mesh.get_r(mesh_ind) + mesh.get_r(ind_minus)) / 2.0
                 # r_(i+1/2,j) value
                 r_plus[i, j] = (mesh.get_r(mesh_ind) + mesh.get_r(ind_plus)) / 2.0
+                # theta_(i,j) value
+                theta_self[i, j] = mesh.get_theta(mesh_ind)
 
         # Check the CFL Condition for Diffusion Equation
         cfl_r = dt * diffc_perp / (dr * dr)
@@ -118,6 +128,9 @@ class Diffusion:
                     # Second order central difference components in theta direction
                     du_perp += (u[i, j - 1] + u[i, j + 1] - 2 * u[i, j]) / (r_self[i, j] * r_self[i, j] * dtheta * dtheta)
 
+                    # Adding pseudo source term for MMS
+                    du_perp += mms.source_term(r_self[i, j], theta_self[i, j], n*dt)
+
                     u[i, j] += du_perp * dt * diffc_perp
 
             if n % n_out == 0:
@@ -129,6 +142,10 @@ class Diffusion:
 
                 print("Elapsed time = {}  || Field sum = {}".format(n * dt, u_sum/(nr*ntheta)))
                 print("Elapsed CPU time = {}".format(time.clock()))
+
+            # Output L2 error for MMS
+            if n == n_t - 1:
+                print("L2 error for dr = {}, dtheta = {}, dt = {} and at t = {} is {}".format(dr, dtheta, dt, n*dt, mms.error_computation(mesh, u, n*dt)))
 
         print("Total CPU time = {}".format(time.clock()))
         # End
