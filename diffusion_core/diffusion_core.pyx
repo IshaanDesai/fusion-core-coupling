@@ -129,9 +129,7 @@ class Diffusion:
                     du_perp += (u[i, j - 1] + u[i, j + 1] - 2 * u[i, j]) / (r_self[i, j] * r_self[i, j] * dtheta * dtheta)
 
                     # Adding pseudo source term for MMS
-                    du_perp += mms.source_term(r_self[i, j], theta_self[i, j], n*dt)
-
-                    u[i, j] += du_perp * dt * diffc_perp
+                    u[i, j] += du_perp * dt * diffc_perp + dt * mms.source_term(r_self[i, j], theta_self[i, j], n*dt)
 
             if n % n_out == 0:
                 write_vtk(u, mesh, n)
@@ -142,10 +140,8 @@ class Diffusion:
 
                 print("Elapsed time = {}  || Field sum = {}".format(n * dt, u_sum/(nr*ntheta)))
                 print("Elapsed CPU time = {}".format(time.clock()))
-
-            # Output L2 error for MMS
-            if n == n_t - 1:
-                print("L2 error for dr = {}, dtheta = {}, dt = {} and at t = {} is {}".format(dr, dtheta, dt, n*dt, mms.error_computation(mesh, u, n*dt)))
+                # Output L2 error for MMS
+                print("dr = {}, dtheta = {}, dt = {} and at t = {} | L2 error = {}".format(dr, dtheta, dt, n*dt, mms.error_computation(mesh, u, n*dt)))
 
         print("Total CPU time = {}".format(time.clock()))
         # End

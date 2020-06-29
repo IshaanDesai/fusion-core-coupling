@@ -23,36 +23,34 @@ cdef class MMS:
         self.nr, self.ntheta = mesh.get_n_points_axiswise()
 
         self.dr = mesh.get_r_spacing()
-        self.dtheta = 2 * math.pi / config.get_theta_points()
+        self.dtheta = 2*math.pi/config.get_theta_points()
 
     def init_mms(self, r, theta):
         """
-        Initial state based on the mms solution f = sin(2*pi*(r - rmin)/(rmax - rmin))*cost(omega*t)*cos(theta)
+        Initial state based on the mms solution f = sin(2*pi*(r - rmin)/(rmax - rmin))*cos(t)*cos(theta)
         Achieved by inserting t = 0 in the solution.
         :param mesh:
         :param r:
         :param theta:
         :return:
         """
-        return math.sin(2 * math.pi * (r - self.rmin) / (self.rmax - self.rmin)) * math.cos(theta)
+        return math.sin(2*math.pi*(r - self.rmin + self.dr)/(self.rmax - self.rmin + 2*self.dr))*math.cos(theta)
 
     def source_term(self, r, theta, t):
         """
         Calculation of source term based on assumed solution: f = sin(2*pi*(r - rmin)/(rmax - rmin))*cos(t)*cos(theta)
-        This solution is plugged into the equation S_mms = dt(f) - D*dperp^2(f)
+        This solution is plugged into the equation S_mms = d_t(f) - D*d_perp^2(f)
         S_mms is the pseudo source term generated
         This source term is added to the current finite difference stencil evaluation
         :return:
         """
-        cdef double var1 = 2 * math.pi * (r - self.rmin) / (self.rmax - self.rmin)
-        cdef double var2 = 2 * math.pi / (self.rmax - self.rmin)
-        cdef double source = -math.sin(var1) * math.sin(t) * math.cos(theta)
-        source += -self.diffc * math.cos(t) * math.cos(theta) * (
-                    -(var2 ** 2) * math.sin(t) + var2 * math.cos(var1) - math.sin(var1))
-
+        cdef double a = 2*math.pi*(r - self.rmin + self.dr)/(self.rmax - self.rmin + 2*self.dr)
+        cdef double da = 2*math.pi/(self.rmax - self.rmin + 2*self.dr)
+        cdef double source = -math.sin(a)*math.sin(t)*math.cos(theta)
+        source += self.diffc*math.cos(t)*math.cos(theta)*((da**2)*math.sin(a) - da*math.cos(a)/r + math.sin(a)/r**2)
         return source
 
-    def analytical_soln(self, r, theta, t):
+    def mms_soln(self, r, theta, t):
         """
         Solution f = sin(2*pi*(r - rmin)/(rmax - rmin))*cos(t)*cos(theta)
         :param r:
@@ -60,8 +58,8 @@ cdef class MMS:
         :param t:
         :return:
         """
-        var1 = 2*math.pi*(r - self.rmin)/(self.rmax - self.rmin)
-        return math.sin(var1)*math.cos(t)*math.cos(theta)
+        a = 2*math.pi*(r - self.rmin + self.dr)/(self.rmax - self.rmin + 2*self.dr)
+        return math.sin(a)*math.cos(t)*math.cos(theta)
 
     def error_computation(self, mesh, field, t):
         """
@@ -75,11 +73,8 @@ cdef class MMS:
                 mesh_ind = mesh.get_index_from_i_j(i, j - 1)
                 r = mesh.get_r(mesh_ind)
                 theta = mesh.get_theta(mesh_ind)
-                error_abs += abs(field[i, j] - self.analytical_soln(r, theta, t))**2 * r * self.dr * self.dtheta
-                mms_sum += self.analytical_soln(r, theta, t)**2 * r * self.dr * self.dtheta
+                eval = self.mms_soln(r, theta, t)
+                error_abs += (field[i, j] - eval)**2
+                mms_sum += eval**2
 
-        return error_abs/mms_sum
-
-
-
-
+        return math.sqrt(error_abs)/math.sqrt(mms_sum)
