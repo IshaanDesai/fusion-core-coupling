@@ -53,7 +53,10 @@ class Mesh:
         theta_spacing = 2*math.pi / self._theta_points
 
         # Adding 2 extra radial vertex rows as ghost point layers for boundary conditions
-        self._r_points = int(round(r_v)) + 2
+        # self._r_points = int(round(r_v)) + 2
+
+        # Not adding extra radial vertices as ghost layers
+        self._r_points = int(round(r_v)) + 1
 
         print("r_points = {}, theta_points = {}".format(self._r_points, self._theta_points))
         print("r_spacing = {}, theta_spacing = {}".format(self._r_spacing, theta_spacing))
@@ -72,9 +75,11 @@ class Mesh:
 
         mesh_index_grid, mesh_index_ghost = [], []
 
-        r_count = self._rmin - self._r_spacing
+        # r_count = self._rmin - self._r_spacing
+        r_count = self._rmin
         theta_count, k = 0, 0
         for i in range(self._r_points):
+            print("Setting values for radius: {}".format(r_count))
             for j in range(self._theta_points):
                 self._polar_coords_r[i, j] = r_count
                 self._polar_coords_theta[i, j] = theta_count
@@ -82,7 +87,7 @@ class Mesh:
                 self._cart_coords_x[i, j] = r_count*math.cos(theta_count)
                 self._cart_coords_y[i, j] = r_count*math.sin(theta_count)
 
-                if r_count < self._rmin or r_count > self._rmax:
+                if r_count <= self._rmin or r_count >= self._rmax:
                     self._vertex_type[i][j] = MeshVertexType.GHOST
                     mesh_index_ghost.append(self._mesh_count)
                     self._ghost_count += 1
@@ -99,6 +104,7 @@ class Mesh:
                 self._mesh_count += 1
 
             r_count += self._r_spacing
+            k += 1
 
         print("Total mesh points = {}, Grid Points = {}, Ghost points = {}".format(self._mesh_count, self._grid_count,
                                                                              self._ghost_count))

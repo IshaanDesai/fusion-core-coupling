@@ -34,7 +34,7 @@ cdef class MMS:
         :param theta:
         :return:
         """
-        return math.sin(2*math.pi*(r - self.rmin + self.dr)/(self.rmax - self.rmin + 2*self.dr))*math.cos(theta)
+        return math.sin(2*math.pi*(r - self.rmin)/(self.rmax - self.rmin))*math.cos(theta)
 
     def source_term(self, r, theta, t):
         """
@@ -44,8 +44,8 @@ cdef class MMS:
         This source term is added to the current finite difference stencil evaluation
         :return:
         """
-        cdef double a = 2*math.pi*(r - self.rmin + self.dr)/(self.rmax - self.rmin + 2*self.dr)
-        cdef double da = 2*math.pi/(self.rmax - self.rmin + 2*self.dr)
+        cdef double a = 2*math.pi*(r - self.rmin)/(self.rmax - self.rmin)
+        cdef double da = 2*math.pi/(self.rmax - self.rmin)
         cdef double source = -math.sin(a)*math.sin(t)*math.cos(theta)
         source += self.diffc*math.cos(t)*math.cos(theta)*((da**2)*math.sin(a) - da*math.cos(a)/r + math.sin(a)/r**2)
         return source
@@ -58,7 +58,7 @@ cdef class MMS:
         :param t:
         :return:
         """
-        a = 2*math.pi*(r - self.rmin + self.dr)/(self.rmax - self.rmin + 2*self.dr)
+        a = 2*math.pi*(r - self.rmin)/(self.rmax - self.rmin)
         return math.sin(a)*math.cos(t)*math.cos(theta)
 
     def error_computation(self, mesh, field, t):

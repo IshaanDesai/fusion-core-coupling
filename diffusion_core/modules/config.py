@@ -34,13 +34,13 @@ class Config:
 
         self._diffc_perp = None
         self._dt = None
-        self._n_t = None
-        self._n_out = None
+        self._t_total = None
+        self._t_out = None
 
-        self._rb = None
-        self._rhob = None
-        self._wrb = None
-        self._wrhob = None
+        self._xb = None
+        self._yb = None
+        self._wxb = None
+        self._wyb = None
 
         self.read_json(config_filename)
 
@@ -73,8 +73,8 @@ class Config:
 
         self._diffc_perp = data["diffusion_parameters"]["coeff_perp"]
         self._dt = data["simulation_parameters"]["timestep"]
-        self._n_t = data["simulation_parameters"]["n_timesteps"]
-        self._n_out = data["simulation_parameters"]["n_output"]
+        self._t_total = data["simulation_parameters"]["total_time"]
+        self._t_out = data["simulation_parameters"]["t_output"]
 
         self._xb = data["init_conditions"]["xb"]
         self._yb = data["init_conditions"]["yb"]
@@ -119,11 +119,11 @@ class Config:
     def get_dt(self):
         return self._dt
 
-    def get_n_timesteps(self):
-        return self._n_t
+    def get_total_time(self):
+        return self._t_total
 
-    def get_n_output(self):
-        return self._n_out
+    def get_t_output(self):
+        return self._t_out
 
     def get_xb_yb(self):
         return self._xb, self._yb

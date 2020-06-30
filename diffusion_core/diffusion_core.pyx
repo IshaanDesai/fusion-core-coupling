@@ -70,7 +70,9 @@ class Diffusion:
         print("Diffusion coefficient = {}".format(diffc_perp))
         cdef double dt = config.get_dt()
         print("dt = {}".format(dt))
-        n_t, n_out = config.get_n_timesteps(), config.get_n_output()
+        t_total, t_out = config.get_total_time(), config.get_t_output()
+        cdef int n_t = int(t_total/dt)
+        cdef int n_out = int(t_out/dt)
 
         cdef double dr = mesh.get_r_spacing()
         cdef double dtheta = 2 * math.pi / config.get_theta_points()
@@ -131,7 +133,7 @@ class Diffusion:
                     # Adding pseudo source term for MMS
                     u[i, j] += du_perp * dt * diffc_perp + dt * mms.source_term(r_self[i, j], theta_self[i, j], n*dt)
 
-            if n % n_out == 0:
+            if n%n_out==0 or n==n_t-1:
                 write_vtk(u, mesh, n)
                 u_sum = 0
                 for i in range(nr):
