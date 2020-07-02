@@ -131,7 +131,7 @@ class Diffusion:
                     du_perp += (u[i, j - 1] + u[i, j + 1] - 2 * u[i, j]) / (r_self[i, j] * r_self[i, j] * dtheta * dtheta)
 
                     # Adding pseudo source term for MMS
-                    u[i, j] += du_perp * dt * diffc_perp + dt * mms.source_term(r_self[i, j], theta_self[i, j], n*dt)
+                    u[i, j] += du_perp*dt*diffc_perp + dt*mms.source_term(r_self[i, j], theta_self[i, j], n*dt)
 
             if n%n_out==0 or n==n_t-1:
                 write_vtk(u, mesh, n)

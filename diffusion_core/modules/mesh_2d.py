@@ -52,9 +52,6 @@ class Mesh:
         r_v = (self._rmax - self._rmin) / self._r_spacing
         theta_spacing = 2*math.pi / self._theta_points
 
-        # Adding 2 extra radial vertex rows as ghost point layers for boundary conditions
-        # self._r_points = int(round(r_v)) + 2
-
         # Not adding extra radial vertices as ghost layers
         self._r_points = int(round(r_v)) + 1
 
@@ -75,19 +72,17 @@ class Mesh:
 
         mesh_index_grid, mesh_index_ghost = [], []
 
-        # r_count = self._rmin - self._r_spacing
-        r_count = self._rmin
-        theta_count, k = 0, 0
+        r_val = self._rmin
         for i in range(self._r_points):
-            print("Setting values for radius: {}".format(r_count))
+            theta_val = 0
             for j in range(self._theta_points):
-                self._polar_coords_r[i, j] = r_count
-                self._polar_coords_theta[i, j] = theta_count
+                self._polar_coords_r[i, j] = r_val
+                self._polar_coords_theta[i, j] = theta_val
 
-                self._cart_coords_x[i, j] = r_count*math.cos(theta_count)
-                self._cart_coords_y[i, j] = r_count*math.sin(theta_count)
+                self._cart_coords_x[i, j] = r_val*math.cos(theta_val)
+                self._cart_coords_y[i, j] = r_val*math.sin(theta_val)
 
-                if r_count <= self._rmin or r_count >= self._rmax:
+                if r_val <= self._rmin or r_val >= self._rmax:
                     self._vertex_type[i][j] = MeshVertexType.GHOST
                     mesh_index_ghost.append(self._mesh_count)
                     self._ghost_count += 1
@@ -100,11 +95,10 @@ class Mesh:
                 self._mesh_i[self._mesh_count] = i
                 self._mesh_j[self._mesh_count] = j
 
-                theta_count += theta_spacing
+                theta_val += theta_spacing
                 self._mesh_count += 1
 
-            r_count += self._r_spacing
-            k += 1
+            r_val += self._r_spacing
 
         print("Total mesh points = {}, Grid Points = {}, Ghost points = {}".format(self._mesh_count, self._grid_count,
                                                                              self._ghost_count))
