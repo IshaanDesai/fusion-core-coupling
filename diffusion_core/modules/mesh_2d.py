@@ -29,7 +29,6 @@ class Mesh:
         self._dims = self._config.get_dims()
         self._rmin = self._config.get_rmin()
         self._rmax = self._config.get_rmax()
-        self._r_spacing = self._config.get_r_spacing()
         self._theta_points = self._config.get_theta_points()
 
         self._polar_coords_r = None  # Initialized in create_mesh function
@@ -44,16 +43,13 @@ class Mesh:
         self._mesh_i, self._mesh_j = None, None  # Initialized in create_mesh function
 
         self._mesh_count, self._grid_count, self._ghost_count = 0, 0, 0
-        self._r_points = 0.0
+        self._r_points = self._config.get_r_points()
 
         self._create_mesh()
 
     def _create_mesh(self):
-        r_v = (self._rmax - self._rmin) / self._r_spacing
+        self._r_spacing = (self._rmax - self._rmin) / (self._r_points - 1)
         theta_spacing = 2*math.pi / self._theta_points
-
-        # Not adding extra radial vertices as ghost layers
-        self._r_points = int(round(r_v)) + 1
 
         print("r_points = {}, theta_points = {}".format(self._r_points, self._theta_points))
         print("r_spacing = {}, theta_spacing = {}".format(self._r_spacing, theta_spacing))
@@ -74,7 +70,7 @@ class Mesh:
 
         r_val = self._rmin
         for i in range(self._r_points):
-            theta_val = 0
+            theta_val = -theta_spacing
             for j in range(self._theta_points):
                 self._polar_coords_r[i, j] = r_val
                 self._polar_coords_theta[i, j] = theta_val

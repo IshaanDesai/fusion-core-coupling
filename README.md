@@ -8,11 +8,17 @@ python3 setup.py build_ext --inplace
 ```
 
 ### Running diffusion problem:
+Create directory for VTK output:
+```
+mkdir output
+```
+
 Run diffusion code:
 ```
 python3 main.py
 ```
-The problem can be configured via the JSON configuration file: `diffusion-coupling-config.json`
+
+The setup can be configured via the JSON configuration file: `diffusion-coupling-config.json`
 
 ### Output and visualization
 The magnitude of the field variable is output on the terminal at each output interval.

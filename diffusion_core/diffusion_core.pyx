@@ -29,7 +29,7 @@ class Diffusion:
 
         # Mesh setup
         mesh = Mesh(problem_config_file)
-        nr, ntheta = mesh.get_n_points_axiswise()
+        nr, ntheta = config.get_r_points(), config.get_theta_points()
         rmin, rmax = config.get_rmin(), config.get_rmax()
 
         # Create MMS module object
@@ -38,6 +38,8 @@ class Diffusion:
         # Definition of field variable
         u_numpy = np.zeros((nr, ntheta + 2), dtype=np.double)
         cdef double [:, ::1] u = u_numpy
+        du_perp_numpy = np.zeros((nr, ntheta + 2), dtype=np.double)
+        cdef double [:, ::1] du_perp = du_perp_numpy
 
         # Initializing Gaussian blob as initial condition of field
         # x_center, y_center = config.get_xb_yb()
@@ -111,7 +113,7 @@ class Diffusion:
         assert (cfl_theta < 0.5)
 
         # Time loop
-        cdef double du_perp, u_sum
+        cdef double u_sum
         for n in range(n_t):
             # Assign values to ghost cells for periodicity in theta direction
             for i in range(nr):
@@ -121,17 +123,17 @@ class Diffusion:
             # Iterate over all grid points in a Cartesian grid fashion
             for i in range(1, nr - 1):
                 for j in range(1, ntheta + 1):
-                    du_perp = 0.0
-
                     # Staggered grid scheme to evaluate derivatives in radial direction
-                    du_perp += (r_plus[i, j] * (u[i + 1, j] - u[i, j]) - r_minus[i, j] * (u[i, j] - u[i - 1, j])) / (
-                               r_self[i, j] * dr * dr)
+                    du_perp[i, j] = (r_plus[i, j]*(u[i + 1, j] - u[i, j]) - r_minus[i, j]*(u[i, j] - u[i - 1, j])) / (
+                               r_self[i, j]*dr*dr)
 
                     # Second order central difference components in theta direction
-                    du_perp += (u[i, j - 1] + u[i, j + 1] - 2 * u[i, j]) / (r_self[i, j] * r_self[i, j] * dtheta * dtheta)
+                    du_perp[i, j] += (u[i, j - 1] + u[i, j + 1] - 2*u[i, j]) / (r_self[i, j]*r_self[i, j]*dtheta*dtheta)
 
-                    # Adding pseudo source term for MMS
-                    u[i, j] += du_perp*dt*diffc_perp + dt*mms.source_term(r_self[i, j], theta_self[i, j], n*dt)
+            # Update scheme
+            for i in range(1, nr - 1):
+                for j in range(1, ntheta + 1):
+                    u[i, j] += dt*diffc_perp*du_perp[i, j] + dt*mms.source_term(r_self[i, j], theta_self[i, j], n*dt)
 
             if n%n_out==0 or n==n_t-1:
                 write_vtk(u, mesh, n)

@@ -20,7 +20,7 @@ cdef class MMS:
         self.rmax = config.get_rmax()
         self.diffc = config.get_diffusion_coeff()
 
-        self.nr, self.ntheta = mesh.get_n_points_axiswise()
+        self.nr, self.ntheta = config.get_r_points(), config.get_theta_points()
 
         self.dr = mesh.get_r_spacing()
         self.dtheta = 2*math.pi/config.get_theta_points()

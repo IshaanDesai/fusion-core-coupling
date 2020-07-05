@@ -29,7 +29,7 @@ class Config:
         self._dims = None
         self._rmin = None
         self._rmax = None
-        self._r_spacing = None
+        self._r_points = None
         self._theta_points = None
 
         self._diffc_perp = None
@@ -68,7 +68,7 @@ class Config:
         self._dims = data["mesh_parameters"]["dimensions"]
         self._rmin = data["mesh_parameters"]["r_inner"]
         self._rmax = data["mesh_parameters"]["r_outer"]
-        self._r_spacing = data["mesh_parameters"]["radial_spacing"]
+        self._r_points = data["mesh_parameters"]["radial_points"]
         self._theta_points = data["mesh_parameters"]["circular_points"]
 
         self._diffc_perp = data["diffusion_parameters"]["coeff_perp"]
@@ -107,8 +107,8 @@ class Config:
     def get_rmax(self):
         return self._rmax
 
-    def get_r_spacing(self):
-        return self._r_spacing
+    def get_r_points(self):
+        return self._r_points
 
     def get_theta_points(self):
         return self._theta_points
