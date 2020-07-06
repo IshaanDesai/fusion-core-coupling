@@ -5,6 +5,7 @@ import numpy as np
 import math
 from .config import Config
 import enum
+import logging
 
 
 class MeshVertexType(enum.Enum):
@@ -23,6 +24,7 @@ class Mesh:
         """
         :param config_file_name:
         """
+        self.logger = logging.getLogger('main.mesh_2d.Mesh')
 
         self._config = Config(config_file_name)
 
@@ -51,9 +53,9 @@ class Mesh:
         self._r_spacing = (self._rmax - self._rmin) / (self._r_points - 1)
         theta_spacing = 2*math.pi / self._theta_points
 
-        print("r_points = {}, theta_points = {}".format(self._r_points, self._theta_points))
-        print("r_spacing = {}, theta_spacing = {}".format(self._r_spacing, theta_spacing))
-        print("Polar mesh has {} points".format(self._r_points*self._theta_points))
+        self.logger.info('r_points = %d, theta_points = %d', self._r_points, self._theta_points)
+        self.logger.info('r_spacing = %d, theta_spacing = %d', self._r_spacing, theta_spacing)
+        self.logger.info('Polar mesh has %d points', self._r_points*self._theta_points)
 
         self._polar_coords_r = np.zeros((self._r_points, self._theta_points))
         self._polar_coords_theta = np.zeros((self._r_points, self._theta_points))
@@ -96,8 +98,8 @@ class Mesh:
 
             r_val += self._r_spacing
 
-        print("Total mesh points = {}, Grid Points = {}, Ghost points = {}".format(self._mesh_count, self._grid_count,
-                                                                             self._ghost_count))
+        self.logger.info('Total mesh points = %d, Grid Points = %d, Ghost points = %d', self._mesh_count,
+                         self._grid_count, self._ghost_count)
 
         self._mesh_index_of_grid = np.array(mesh_index_grid)
         self._mesh_index_of_ghost = np.array(mesh_index_ghost)

@@ -13,13 +13,15 @@ from diffusion_core.modules.initialization import gaussian_blob
 from diffusion_core.modules.mms cimport MMS
 import math
 import time
-
+import logging
 
 class Diffusion:
     def __init__(self):
+        self.logger = logging.getLogger('main.diffusion_core.Diffusion')
         self._file = None
 
     def solve_diffusion(self):
+        self.logger.info('Solving Diffusion case')
         # Read initial conditions from a JSON config file
         problem_config_file = "diffusion-coupling-config.json"
         config = Config(problem_config_file)
@@ -69,9 +71,9 @@ class Diffusion:
 
         # Get parameters from config and mesh modules
         diffc_perp = config.get_diffusion_coeff()
-        print("Diffusion coefficient = {}".format(diffc_perp))
+        self.logger.info('Diffusion coefficient = %f', diffc_perp)
         cdef double dt = config.get_dt()
-        print("dt = {}".format(dt))
+        self.logger.info('dt = %f', dt)
         t_total, t_out = config.get_total_time(), config.get_t_output()
         cdef int n_t = int(t_total/dt)
         cdef int n_out = int(t_out/dt)
@@ -106,9 +108,9 @@ class Diffusion:
 
         # Check the CFL Condition for Diffusion Equation
         cfl_r = dt * diffc_perp / (dr * dr)
-        print("CFL Coefficient with radial param = {}. Must be less than 0.5".format(cfl_r))
+        self.logger.info('CFL Coefficient with radial param = %f. Must be less than 0.5', cfl_r)
         cfl_theta = dt * diffc_perp / (np.mean(r_self) * np.mean(r_self) * dtheta * dtheta)
-        print("CFL Coefficient with theta param = {}. Must be less than 0.5".format(cfl_theta))
+        self.logger.info('CFL Coefficient with theta param = %f. Must be less than 0.5', cfl_theta)
         assert (cfl_r < 0.5)
         assert (cfl_theta < 0.5)
 
@@ -137,15 +139,16 @@ class Diffusion:
 
             if n%n_out==0 or n==n_t-1:
                 write_vtk(u, mesh, n)
+                self.logger.info('VTK file output written at t = %f', n*dt)
                 u_sum = 0
                 for i in range(nr):
                     for j in range(1, ntheta + 1):
                         u_sum += u[i, j]
 
-                print("Elapsed time = {}  || Field sum = {}".format(n * dt, u_sum/(nr*ntheta)))
-                print("Elapsed CPU time = {}".format(time.clock()))
+                self.logger.info('Elapsed time = %f  || Field sum = %f', n*dt, u_sum/(nr*ntheta))
+                self.logger.info('Elapsed CPU time = %f', time.clock())
                 # Output L2 error for MMS
-                print("dr = {}, dtheta = {}, dt = {} and at t = {} | L2 error = {}".format(dr, dtheta, dt, n*dt, mms.error_computation(mesh, u, n*dt)))
+                self.logger.info('dr = %f, dtheta = %f, dt = %f and at t = %f | L2 error = %f', dr, dtheta, dt, n*dt, mms.error_computation(mesh, u, n*dt))
 
-        print("Total CPU time = {}".format(time.clock()))
+        self.logger.info('Total CPU time = %f', time.clock())
         # End

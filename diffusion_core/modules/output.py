@@ -18,8 +18,6 @@ def write_vtk(field, mesh, t):
     point_type = np.zeros((nr, ntheta, nz))
     field_out = np.zeros((nr, ntheta, nz))
 
-    print("Writing VTK output at t = {}".format(t))
-
     counter = 0
     for i in range(nr):
         for j in range(ntheta):
