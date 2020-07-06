@@ -1,0 +1,4 @@
+rm *.log
+rm slurm*
+rm -r precice-run/
+rm output/* 

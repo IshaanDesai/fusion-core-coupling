@@ -1,7 +1,7 @@
 import os
 from setuptools import setup, find_packages
 from Cython.Build import cythonize
-
+import numpy
 
 def find_pyx(path='.'):
     pyx_files = []
@@ -17,5 +17,6 @@ setup(
     version='0.1',
     ext_modules=cythonize(find_pyx(), language_level=3),
     install_requires=['Cython'],
+    include_dirs=[numpy.get_include()],
     packages=find_packages()
 )
