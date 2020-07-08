@@ -13,7 +13,8 @@ class MeshVertexType(enum.Enum):
     Defines vertex types: Physical vertex (CORE), and boundary vertex (GHOST).
     """
     CORE = 0  # physical grid point
-    GHOST = 1  # ghost grid point
+    GHOST_WALL = 1  # ghost grid point on outer edge
+    GHOST_CORE = 2  # ghost grid point on inner edge
 
 
 class Mesh:
@@ -44,7 +45,7 @@ class Mesh:
         self._mesh_index_of_ghost = None  # Initialized in create_mesh function
         self._mesh_i, self._mesh_j = None, None  # Initialized in create_mesh function
 
-        self._mesh_count, self._grid_count, self._ghost_count = 0, 0, 0
+        self._mesh_count, self._grid_count, self._ghostcore_count, self._ghostwall_count = 0, 0, 0, 0
         self._r_points = self._config.get_r_points()
 
         self._create_mesh()
@@ -68,7 +69,7 @@ class Mesh:
         # https://stackoverflow.com/questions/6667201/how-to-define-a-two-dimensional-array-in-python
         self._vertex_type = [[0 for x in range(self._theta_points)] for y in range(self._r_points)]
 
-        mesh_index_grid, mesh_index_ghost = [], []
+        mesh_index_grid, mesh_index_ghostcore, mesh_index_ghostwall = [], [], []
 
         r_val = self._rmin
         for i in range(self._r_points):
@@ -80,10 +81,14 @@ class Mesh:
                 self._cart_coords_x[i, j] = r_val*math.cos(theta_val)
                 self._cart_coords_y[i, j] = r_val*math.sin(theta_val)
 
-                if r_val <= self._rmin or r_val >= self._rmax:
-                    self._vertex_type[i][j] = MeshVertexType.GHOST
-                    mesh_index_ghost.append(self._mesh_count)
-                    self._ghost_count += 1
+                if r_val <= self._rmin:
+                    self._vertex_type[i][j] = MeshVertexType.GHOST_CORE
+                    mesh_index_ghostcore.append(self._mesh_count)
+                    self._ghostcore_count += 1
+                elif r_val >= self._rmax:
+                    self._vertex_type[i][j] = MeshVertexType.GHOST_WALL
+                    mesh_index_ghostwall.append(self._mesh_count)
+                    self._ghostwall_count += 1
                 else:
                     self._vertex_type[i][j] = MeshVertexType.CORE
                     mesh_index_grid.append(self._mesh_count)
@@ -98,11 +103,14 @@ class Mesh:
 
             r_val += self._r_spacing
 
+        self._ghost_count = self._ghostcore_count + self._ghostwall_count
+
         self.logger.info('Total mesh points = %d, Grid Points = %d, Ghost points = %d', self._mesh_count,
                          self._grid_count, self._ghost_count)
 
         self._mesh_index_of_grid = np.array(mesh_index_grid)
-        self._mesh_index_of_ghost = np.array(mesh_index_ghost)
+        self._mesh_index_of_ghostcore = np.array(mesh_index_ghostcore)
+        self._mesh_index_of_ghostwall = np.array(mesh_index_ghostwall)
 
     def get_i_j_from_index(self, index):
         return self._mesh_i[index], self._mesh_j[index]
@@ -129,8 +137,11 @@ class Mesh:
     def grid_to_mesh_index(self, index):
         return self._mesh_index_of_grid[index]
 
-    def ghost_to_mesh_index(self, index):
-        return self._mesh_index_of_ghost[index]
+    def ghostcore_to_mesh_index(self, index):
+        return self._mesh_index_of_ghostcore[index]
+
+    def ghostwall_to_mesh_index(self, index):
+        return self._mesh_index_of_ghostwall[index]
 
     def get_n_points_mesh(self):
         return self._mesh_count
@@ -140,6 +151,12 @@ class Mesh:
 
     def get_n_points_ghost(self):
         return self._ghost_count
+
+    def get_n_points_ghostcore(self):
+        return self._ghostcore_count
+
+    def get_n_points_ghostwall(self):
+        return self._ghostwall_count
 
     def get_n_points_axiswise(self):
         return self._r_points, self._theta_points

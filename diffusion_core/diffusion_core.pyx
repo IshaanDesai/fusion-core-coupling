@@ -8,78 +8,94 @@ cimport cython
 from diffusion_core.modules.mesh_2d import Mesh, MeshVertexType
 from diffusion_core.modules.output import write_vtk
 from diffusion_core.modules.config import Config
-from diffusion_core.modules.boundary import set_bnd_vals
+from diffusion_core.modules.boundary import Boundary, BoundaryType
 from diffusion_core.modules.initialization import gaussian_blob
-from diffusion_core.modules.mms cimport MMS
 import math
 import time
 import logging
+import precice
+from precice import action_write_initial_data, action_write_iteration_checkpoint, action_read_iteration_checkpoint
 
 class Diffusion:
     def __init__(self):
         self.logger = logging.getLogger('main.diffusion_core.Diffusion')
-        self._file = None
+
+        # Read initial conditions from a JSON config file
+        self._config = Config("diffusion-coupling-config.json")
+
+        # Define coupling interface
+        self._interface = precice.Interface(self._config.get_participant_name(), self._config.get_config_file_name, 0, 1)
+
+        # Coupling mesh
+        self._coupling_mesh_vertices = None
+        self._vertex_ids = None
 
     def solve_diffusion(self):
         self.logger.info('Solving Diffusion case')
-        # Read initial conditions from a JSON config file
-        problem_config_file = "diffusion-coupling-config.json"
-        config = Config(problem_config_file)
 
         # Iterators
         cdef Py_ssize_t i, j
 
         # Mesh setup
         mesh = Mesh(problem_config_file)
-        nr, ntheta = config.get_r_points(), config.get_theta_points()
-        rmin, rmax = config.get_rmin(), config.get_rmax()
+        nr, ntheta = self._config.get_r_points(), self._config.get_theta_points()
+        rmin, rmax = self._config.get_rmin(), self._config.get_rmax()
 
-        # Create MMS module object
-        mms = MMS(config, mesh)
+        # Define coupling mesh (current definition assumes polar participant is Inner (Core) of Tokamak)
+        vertices_x, vertices_y = [], []
+        for i in range(mesh.get_n_points_ghostwall()):
+            ghost_id = mesh.ghostwall_to_mesh_index(i)
+            vertices_x = mesh.get_x(ghost_id)
+            vertices_y = mesh.get_y(ghost_id)
+
+        self._coupling_mesh_vertices = np.stack([vertices_x, vertices_y], axis=1)
+
+        # Set up mesh in preCICE
+        self._vertex_ids = self._interface.set_mash_vertices(self._interface.get_mesh_id(self._config.get_coupling_mesh_name()),
+            self._coupling_mesh_vertices)
+
+        self._mesh_id = self._interface.get_mesh_id(self._config.get_coupling_mesh_name())
+        self._read_data_id = self._interface.get_data_id(self._config.get_read_data_name(), self._mesh_id)
+        self._write_data_id = self._interface.get_data_id(self._config.get_write_data_name(), self._mesh_id)
 
         # Definition of field variable
         u_numpy = np.zeros((nr, ntheta + 2), dtype=np.double)
         cdef double [:, ::1] u = u_numpy
         du_perp_numpy = np.zeros((nr, ntheta + 2), dtype=np.double)
         cdef double [:, ::1] du_perp = du_perp_numpy
+        u_cp_numpy = np.zeros((nr, ntheta + 2), dtype=np.double)
+        cdef double [:, ::1] u_cp = u_cp_numpy
 
         # Initializing Gaussian blob as initial condition of field
-        # x_center, y_center = config.get_xb_yb()
-        # x_width, y_width = config.get_wxb_wyb()
-        # for l in range(mesh.get_n_points_grid()):
-        #     mesh_ind = mesh.grid_to_mesh_index(l)
-        #     x = mesh.get_x(mesh_ind)
-        #     y = mesh.get_y(mesh_ind)
-        #     gaussx = gaussian_blob(x_center, x_width, x)
-        #     gaussy = gaussian_blob(y_center, y_width, y)
-
-        #     i, j = mesh.get_i_j_from_index(mesh_ind)
-        #     u[i, j] = gaussx * gaussy
-
-        # Initializing custom initial state for MMS analysis
+        x_center, y_center = self._config.get_xb_yb()
+        x_width, y_width = self._config.get_wxb_wyb()
         for l in range(mesh.get_n_points_grid()):
             mesh_ind = mesh.grid_to_mesh_index(l)
-            radialp = mesh.get_r(mesh_ind)
-            thetap = mesh.get_theta(mesh_ind)
+            x = mesh.get_x(mesh_ind)
+            y = mesh.get_y(mesh_ind)
+            gaussx = gaussian_blob(x_center, x_width, x)
+            gaussy = gaussian_blob(y_center, y_width, y)
 
             i, j = mesh.get_i_j_from_index(mesh_ind)
-            u[i, j] = mms.init_mms(radialp, thetap)
+            u[i, j] = gaussx * gaussy
 
-        # Setup Dirichlet boundary conditions at inner and outer edge of the torus
-        bnd_vals = np.zeros(mesh.get_n_points_ghost())
-        set_bnd_vals(mesh, bnd_vals, u)
+        # Setup boundary conditions at inner and outer edge of the torus
+        bndvals_core = np.zeros(mesh.get_n_points_ghostcore())
+        bnd_wall = Boundary(mesh, bnd_vals, u, BoundaryType.NEUMANN, MeshVertexType.GHOST_WALL)
+        bnd_vals_wall = np.zeros(mesh.get_n_points_ghostwall())
+        bnd_core = Boundary(mesh, bnd_vals, u, BoundaryType.DIRICHLET, MeshVertexType.GHOST_CORE)
 
         # Get parameters from config and mesh modules
-        diffc_perp = config.get_diffusion_coeff()
+        diffc_perp = self._config.get_diffusion_coeff()
         self.logger.info('Diffusion coefficient = %f', diffc_perp)
-        cdef double dt = config.get_dt()
+        cdef double dt = self._config.get_dt()
         self.logger.info('dt = %f', dt)
-        t_total, t_out = config.get_total_time(), config.get_t_output()
+        t_total, t_out = self._config.get_total_time(), self._config.get_t_output()
         cdef int n_t = int(t_total/dt)
         cdef int n_out = int(t_out/dt)
 
         cdef double dr = mesh.get_r_spacing()
-        cdef double dtheta = 2 * math.pi / config.get_theta_points()
+        cdef double dtheta = 2 * math.pi / self._config.get_theta_points()
 
         # Calculate radius and theta values at each grid point
         r_self_numpy = np.zeros((nr, ntheta + 2), dtype=np.double)
@@ -114,9 +130,20 @@ class Diffusion:
         assert (cfl_r < 0.5)
         assert (cfl_theta < 0.5)
 
+        # Initialize preCICE interface
+        cdef double precice_dt = self._interface.initialize()
+
         # Time loop
         cdef double u_sum
-        for n in range(n_t):
+        while self._interface.is_coupling_ongoing():
+            if precice.is_action_required(precice.action_write_iteration_checkpoint()):  # write checkpoint
+                u_cp = u
+                self.interface.mark_action_fulfilled(self.action_write_interation_checkpoint())
+
+            # Read coupling data
+            flux_values = self._interface.read_block_vector_data(self._read_data_id, self._vertex_ids)
+            bnd_wall.set_bnd_vals(u, bnd_vals)
+
             # Assign values to ghost cells for periodicity in theta direction
             for i in range(nr):
                 u[i, 0] = u[i, ntheta]
@@ -137,18 +164,30 @@ class Diffusion:
                 for j in range(1, ntheta + 1):
                     u[i, j] += dt*diffc_perp*du_perp[i, j] + dt*mms.source_term(r_self[i, j], theta_self[i, j], n*dt)
 
-            if n%n_out==0 or n==n_t-1:
-                write_vtk(u, mesh, n)
-                self.logger.info('VTK file output written at t = %f', n*dt)
-                u_sum = 0
-                for i in range(nr):
-                    for j in range(1, ntheta + 1):
-                        u_sum += u[i, j]
 
-                self.logger.info('Elapsed time = %f  || Field sum = %f', n*dt, u_sum/(nr*ntheta))
-                self.logger.info('Elapsed CPU time = %f', time.clock())
-                # Output L2 error for MMS
-                self.logger.info('dr = %f, dtheta = %f, dt = %f and at t = %f | L2 error = %f', dr, dtheta, dt, n*dt, mms.error_computation(mesh, u, n*dt))
+            # Write data to coupling interface preCICE
+            scalar_values = bnd_wall.get_bnd_vals(u)
+            self._interface.write_block_scalar_data(self._write_data_id, self._vertex_ids, scalar_values)
+
+            # Advance coupling via preCICE
+            precice_dt = self._interface.advance(dt)
+
+            if precice.is_action_required(precice.action_read_iteration_checkpoint()):  # roll back to checkpoint
+                u = u_cp
+                self._interface.mark_action_fulfilled(self.action_read_iteration_checkpoint())
+            else:  # update solution
+                if n%n_out == 0 or n == n_t-1:
+                    write_vtk(u, mesh, n)
+                    self.logger.info('VTK file output written at t = %f', n*dt)
+                    u_sum = 0
+                    for i in range(nr):
+                        for j in range(1, ntheta + 1):
+                            u_sum += u[i, j]
+
+                    self.logger.info('Elapsed time = %f  || Field sum = %f', n*dt, u_sum/(nr*ntheta))
+                    self.logger.info('Elapsed CPU time = %f', time.clock())
+                    # Output L2 error for MMS
+                    self.logger.info('dr = %f, dtheta = %f, dt = %f and at t = %f | L2 error = %f', dr, dtheta, dt, n*dt, mms.error_computation(mesh, u, n*dt))
 
         self.logger.info('Total CPU time = %f', time.clock())
         # End
