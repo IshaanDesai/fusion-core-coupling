@@ -11,26 +11,32 @@ For VTK output the `pyevtk` module needs to be installed manually:
 pip install --user pyevtk
 ```
 
-### Compile Cython code
+## Compile Cython code
 Clone repository and run:
 ```
 python3 setup.py build_ext --inplace
 ```
 
-### Running diffusion problem:
+## Running diffusion problem:
 Create directory for VTK output:
 ```
 mkdir output
 ```
 
-Run diffusion code:
+Run diffusion code on local machine:
 ```
-python3 main.py
+python3 main.py &
+```
+Run code on cluster:
+```
+sbatch run_serial.sh
+
 ```
 
+## Configuration
 The setup can be configured via the JSON configuration file: `diffusion-coupling-config.json`
 
-### Output and visualization
-The magnitude of the field variable is output on the terminal at each output interval.
-VTK output can be found in the `output/` directory 
+## Output and visualization
+* Log output is generated in the file `logfile.log`
+* VTK output can be found in the `output/` directory 
 

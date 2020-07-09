@@ -1,0 +1,3 @@
+module load anaconda/3/2019.03
+python3 setup.py build_ext --inplace
+
