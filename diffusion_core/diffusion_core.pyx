@@ -21,7 +21,8 @@ class Diffusion:
         self.logger = logging.getLogger('main.diffusion_core.Diffusion')
 
         # Read initial conditions from a JSON config file
-        self._config = Config("diffusion-coupling-config.json")
+        self._config_file_name = "diffusion-coupling-config.json"
+        self._config = Config(self._config._file_name)
 
         # Define coupling interface
         self._interface = precice.Interface(self._config.get_participant_name(), self._config.get_config_file_name, 0, 1)
@@ -37,7 +38,7 @@ class Diffusion:
         cdef Py_ssize_t i, j
 
         # Mesh setup
-        mesh = Mesh(problem_config_file)
+        mesh = Mesh(self._config_file_name)
         nr, ntheta = self._config.get_r_points(), self._config.get_theta_points()
         rmin, rmax = self._config.get_rmin(), self._config.get_rmax()
 
@@ -80,10 +81,10 @@ class Diffusion:
             u[i, j] = gaussx * gaussy
 
         # Setup boundary conditions at inner and outer edge of the torus
+        bndvals_wall = np.zeros(mesh.get_n_points_ghostwall())
+        bnd_wall = Boundary(mesh, bndvals_wall, u, BoundaryType.NEUMANN, MeshVertexType.GHOST_WALL)
         bndvals_core = np.zeros(mesh.get_n_points_ghostcore())
-        bnd_wall = Boundary(mesh, bnd_vals, u, BoundaryType.NEUMANN, MeshVertexType.GHOST_WALL)
-        bnd_vals_wall = np.zeros(mesh.get_n_points_ghostwall())
-        bnd_core = Boundary(mesh, bnd_vals, u, BoundaryType.DIRICHLET, MeshVertexType.GHOST_CORE)
+        bnd_core = Boundary(mesh, bndvals_core, u, BoundaryType.DIRICHLET, MeshVertexType.GHOST_CORE)
 
         # Get parameters from config and mesh modules
         diffc_perp = self._config.get_diffusion_coeff()
@@ -133,16 +134,23 @@ class Diffusion:
         # Initialize preCICE interface
         cdef double precice_dt = self._interface.initialize()
 
+        # Write initial data
+        write_vtk(u, mesh, 0)
+        self.logger.info('Initial state: VTK file output written at t = %f', 0)
+
         # Time loop
-        cdef double u_sum
+        cdef double u_sum, t, t_cp
+        cdef int n, n_cp
         while self._interface.is_coupling_ongoing():
             if precice.is_action_required(precice.action_write_iteration_checkpoint()):  # write checkpoint
                 u_cp = u
+                n_cp = n
+                t_cp = t
                 self.interface.mark_action_fulfilled(self.action_write_interation_checkpoint())
 
             # Read coupling data
             flux_values = self._interface.read_block_vector_data(self._read_data_id, self._vertex_ids)
-            bnd_wall.set_bnd_vals(u, bnd_vals)
+            bnd_wall.set_bnd_vals(u, flux_values)
 
             # Assign values to ghost cells for periodicity in theta direction
             for i in range(nr):
@@ -162,8 +170,7 @@ class Diffusion:
             # Update scheme
             for i in range(1, nr - 1):
                 for j in range(1, ntheta + 1):
-                    u[i, j] += dt*diffc_perp*du_perp[i, j] + dt*mms.source_term(r_self[i, j], theta_self[i, j], n*dt)
-
+                    u[i, j] += dt*diffc_perp*du_perp[i, j]
 
             # Write data to coupling interface preCICE
             scalar_values = bnd_wall.get_bnd_vals(u)
@@ -174,8 +181,13 @@ class Diffusion:
 
             if precice.is_action_required(precice.action_read_iteration_checkpoint()):  # roll back to checkpoint
                 u = u_cp
+                n = n_cp
+                t = t_cp
                 self._interface.mark_action_fulfilled(self.action_read_iteration_checkpoint())
             else:  # update solution
+                n += 1
+                t += dt
+
                 if n%n_out == 0 or n == n_t-1:
                     write_vtk(u, mesh, n)
                     self.logger.info('VTK file output written at t = %f', n*dt)
@@ -186,8 +198,6 @@ class Diffusion:
 
                     self.logger.info('Elapsed time = %f  || Field sum = %f', n*dt, u_sum/(nr*ntheta))
                     self.logger.info('Elapsed CPU time = %f', time.clock())
-                    # Output L2 error for MMS
-                    self.logger.info('dr = %f, dtheta = %f, dt = %f and at t = %f | L2 error = %f', dr, dtheta, dt, n*dt, mms.error_computation(mesh, u, n*dt))
 
         self.logger.info('Total CPU time = %f', time.clock())
         # End
