@@ -2,23 +2,23 @@
   "participant_name": "Core",
   "config_file_name": "precice-config.xml",
   "interface": {
-      "coupling_mesh_name": "DirichletNodes",
-      "write_data_name": "Flux",
-      "read_data_name": "Temperature"
+      "coupling_mesh_name": "core_polar",
+      "write_data_name": "value",
+      "read_data_name": "flux"
     },
   "mesh_parameters": {
       "dimensions": 2,
       "r_inner": 0.2,
       "r_outer": 0.5,
       "radial_points": 100,
-      "circular_points": 500
+      "circular_points": 200
   },
   "diffusion_parameters": {
     "coeff_perp": 0.01
   },
   "simulation_parameters": {
-      "total_time": 0.5,
-      "timestep": 1E-5,
+      "total_time": 1.0,
+      "timestep": 2.5E-4,
       "t_output": 0.1
   },
   "init_conditions": {
