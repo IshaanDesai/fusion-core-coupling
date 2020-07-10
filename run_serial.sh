@@ -8,7 +8,8 @@
 #SBATCH --time=01:00:00
 
 # Reloading correct modules for FCI-Core:
-module load anaconda/3/2019.03
+module load anaconda
+module load mpi4py
 
 # Run both coupling jobs
 echo "Launching Polar Diffusion Code"
