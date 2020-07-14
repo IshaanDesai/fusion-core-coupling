@@ -21,11 +21,10 @@ class Diffusion:
         self.logger = logging.getLogger('main.diffusion_core.Diffusion')
 
         # Read initial conditions from a JSON config file
-        self._config_file_name = "diffusion-coupling-config.json"
-        self._config = Config(self._config._file_name)
+        self._config = Config('diffusion-coupling-config.json')
 
         # Define coupling interface
-        self._interface = precice.Interface(self._config.get_participant_name(), self._config.get_config_file_name, 0, 1)
+        self._interface = precice.Interface(self._config.get_participant_name(), self._config.get_config_file_name(), 0, 1)
 
         # Coupling mesh
         self._coupling_mesh_vertices = None
@@ -38,7 +37,7 @@ class Diffusion:
         cdef Py_ssize_t i, j
 
         # Mesh setup
-        mesh = Mesh(self._config_file_name)
+        mesh = Mesh(self._config)
         nr, ntheta = self._config.get_r_points(), self._config.get_theta_points()
         rmin, rmax = self._config.get_rmin(), self._config.get_rmax()
 

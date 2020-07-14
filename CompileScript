@@ -1,0 +1,4 @@
+module load anaconda
+module load mpi4py
+python3 setup.py build_ext --inplace
+

@@ -21,18 +21,16 @@ class Mesh:
     """
     Mesh class used to define a mesh in 2D representing a cross section of a torus geometry of a Tokamak.
     """
-    def __init__(self, config_file_name='polar_code_config.json'):
+    def __init__(self, config):
         """
         :param config_file_name:
         """
         self.logger = logging.getLogger('main.mesh_2d.Mesh')
 
-        self._config = Config(config_file_name)
-
-        self._dims = self._config.get_dims()
-        self._rmin = self._config.get_rmin()
-        self._rmax = self._config.get_rmax()
-        self._theta_points = self._config.get_theta_points()
+        self._dims = config.get_dims()
+        self._rmin = config.get_rmin()
+        self._rmax = config.get_rmax()
+        self._theta_points = config.get_theta_points()
 
         self._polar_coords_r = None  # Initialized in create_mesh function
         self._polar_coords_theta = None  # Initialized in create_mesh function
@@ -46,7 +44,7 @@ class Mesh:
         self._mesh_i, self._mesh_j = None, None  # Initialized in create_mesh function
 
         self._mesh_count, self._grid_count, self._ghostcore_count, self._ghostwall_count = 0, 0, 0, 0
-        self._r_points = self._config.get_r_points()
+        self._r_points = config.get_r_points()
 
         self._create_mesh()
 
