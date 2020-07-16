@@ -156,7 +156,7 @@ class Diffusion:
                 u[i, 0] = u[i, ntheta]
                 u[i, ntheta + 1] = u[i, 1]
 
-            # Iterate over all grid points in a Cartesian grid fashion
+            # Iterate over physical points in lexicographic fashion
             for i in range(1, nr - 1):
                 for j in range(1, ntheta + 1):
                     # Staggered grid scheme to evaluate derivatives in radial direction
