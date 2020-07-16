@@ -38,12 +38,17 @@ class Boundary:
                     self._bnd_j.append(j)
                     if self._bnd_type == BoundaryType.DIRICHLET:
                         field[i, j] = data[counter]
+                        counter += 1
                     elif self._bnd_type == BoundaryType.NEUMANN:
                         # Calculate flux from components
                         flux = data[counter, 0]*(x/r) + data[counter, 1]*(y/r)
                         # Modify boundary value by first order evaluation of gradient
                         field[i, j] = field[i + 1, j] + flux*self._dr
-                counter += 1
+                        counter += 1
+
+                self._r.append(r)
+                self._x.append(x)
+                self._y.append(y)
 
     def set_bnd_vals(self, field, data):
         counter = 0
