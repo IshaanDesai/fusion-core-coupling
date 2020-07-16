@@ -1,9 +1,13 @@
 output/*
 diffusion_core/*.c
-diffusion_core/*.cpython-36m-x86_64-linux-gnu.so
+diffusion_core/*.so
 .idea/
 build/
-diffusion_core/modules/*.cpython-36m-x86_64-linux-gnu.so
+diffusion_core/modules/*.so
 diffusion_core/modules/*.c
 *.out
 *.log
+diffusion_core/modules/__pycache__/
+diffusion_core/__pycache__/
+diffusion_core.egg-info/
+dist/
