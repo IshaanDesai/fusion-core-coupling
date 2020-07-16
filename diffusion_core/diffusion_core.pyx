@@ -80,7 +80,7 @@ class Diffusion:
             u[i, j] = gaussx * gaussy
 
         # Setup boundary conditions at inner and outer edge of the torus
-        bndvals_wall = np.zeros(mesh.get_n_points_ghostwall())
+        bndvals_wall = np.zeros((mesh.get_n_points_ghostwall(), 2))
         bnd_wall = Boundary(mesh, bndvals_wall, u, BoundaryType.NEUMANN, MeshVertexType.GHOST_WALL)
         bndvals_core = np.zeros(mesh.get_n_points_ghostcore())
         bnd_core = Boundary(mesh, bndvals_core, u, BoundaryType.DIRICHLET, MeshVertexType.GHOST_CORE)
