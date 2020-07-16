@@ -2,7 +2,7 @@
   "participant_name": "Core",
   "config_file_name": "precice-config-polar-cart.xml",
   "interface": {
-      "coupling_mesh_name": "core_polar",
+      "coupling_mesh_name": "core_mesh",
       "write_data_name": "value",
       "read_data_name": "flux"
     },

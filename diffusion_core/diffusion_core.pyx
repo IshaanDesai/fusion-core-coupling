@@ -45,13 +45,13 @@ class Diffusion:
         vertices_x, vertices_y = [], []
         for i in range(mesh.get_n_points_ghostwall()):
             ghost_id = mesh.ghostwall_to_mesh_index(i)
-            vertices_x = mesh.get_x(ghost_id)
-            vertices_y = mesh.get_y(ghost_id)
+            vertices_x.append(mesh.get_x(ghost_id))
+            vertices_y.append(mesh.get_y(ghost_id))
 
         self._coupling_mesh_vertices = np.stack([vertices_x, vertices_y], axis=1)
 
         # Set up mesh in preCICE
-        self._vertex_ids = self._interface.set_mash_vertices(self._interface.get_mesh_id(self._config.get_coupling_mesh_name()),
+        self._vertex_ids = self._interface.set_mesh_vertices(self._interface.get_mesh_id(self._config.get_coupling_mesh_name()),
             self._coupling_mesh_vertices)
 
         self._mesh_id = self._interface.get_mesh_id(self._config.get_coupling_mesh_name())

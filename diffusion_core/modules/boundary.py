@@ -22,21 +22,20 @@ class Boundary:
 
         self._bnd_i = []
         self._bnd_j = []
-        self._bnd_type = None
-        self._layer_type = None
+        self._bnd_type = bnd_type
+        self._layer_type = later_type
 
         counter = 0
         for i in range(self._nr):
             for j in range(1, self._ntheta + 1):
                 point_type = mesh.get_point_type(i, j - 1)
-                if point_type == layer_type:
+                if point_type == self._layer_type:
                     self._bnd_i.append(i)
                     self._bnd_j.append(j)
-                    self._bnd_type.append(point_type)
-                    if bnd_type == BoundaryType.DIRICHLET:
+                    if self._bnd_type == BoundaryType.DIRICHLET:
                         field[i, j] = data[counter]
                         counter += 1
-                    elif bnd_type == BoundaryType.NEUMANN:
+                    elif self._bnd_type == BoundaryType.NEUMANN:
                         field[i, j] = field[i + 1, j] + data[counter] * self._dr
                         counter += 1
 
@@ -50,7 +49,7 @@ class Boundary:
                 for j in self._bnd_j:
                     field[i, j] = data[counter]
                     counter += 1
-        elif type == BoundaryType.NEUMANN:
+        elif self._bnd_type == BoundaryType.NEUMANN:
             for i in self._bnd_i:
                 for j in self._bnd_j:
                     field[i, j] = field[i + 1, j] + data[counter]*self._dr
