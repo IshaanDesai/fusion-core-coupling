@@ -59,12 +59,16 @@ class Diffusion:
         self._write_data_id = self._interface.get_data_id(self._config.get_write_data_name(), self._mesh_id)
 
         # Definition of field variable
-        u_numpy = np.zeros((nr, ntheta + 2), dtype=np.double)
-        cdef double [:, ::1] u = u_numpy
-        du_perp_numpy = np.zeros((nr, ntheta + 2), dtype=np.double)
-        cdef double [:, ::1] du_perp = du_perp_numpy
-        u_cp_numpy = np.zeros((nr, ntheta + 2), dtype=np.double)
-        cdef double [:, ::1] u_cp = u_cp_numpy
+        u_np = np.zeros((nr, ntheta), dtype=np.double)
+        cdef double [:, ::1] u = u_np
+        du_perp_np = np.zeros((nr, ntheta), dtype=np.double)
+        cdef double [:, ::1] du_perp = du_perp_np
+        u_cp_np = np.zeros((nr, ntheta), dtype=np.double)
+        cdef double [:, ::1] u_cp = u_cp_np
+        u_zero_np = np.zeros(nr, dtype=np.double)
+        cdef double [::1] u_zero = u_zero_np
+        u_twopi_np = np.zeros(nr, dtype=np.double)
+        cdef double [::1] u_twopi = u_twopi_np
 
         # Initializing Gaussian blob as initial condition of field
         x_center, y_center = self._config.get_xb_yb()
@@ -95,21 +99,21 @@ class Diffusion:
         cdef int n_out = int(t_out/dt)
 
         cdef double dr = mesh.get_r_spacing()
-        cdef double dtheta = 2 * math.pi / self._config.get_theta_points()
+        cdef double dtheta = mesh.get_theta_spacing()
 
         # Calculate radius and theta values at each grid point
-        r_self_numpy = np.zeros((nr, ntheta + 2), dtype=np.double)
+        r_self_numpy = np.zeros((nr, ntheta), dtype=np.double)
         cdef double [:, ::1] r_self = r_self_numpy
-        r_minus_numpy = np.zeros((nr, ntheta + 2), dtype=np.double)
+        r_minus_numpy = np.zeros((nr, ntheta), dtype=np.double)
         cdef double [:, ::1] r_minus = r_minus_numpy
-        r_plus_numpy = np.zeros((nr, ntheta + 2), dtype=np.double)
+        r_plus_numpy = np.zeros((nr, ntheta), dtype=np.double)
         cdef double [:, ::1] r_plus = r_plus_numpy
 
-        theta_self_numpy = np.zeros((nr, ntheta + 2), dtype=np.double)
+        theta_self_numpy = np.zeros((nr, ntheta), dtype=np.double)
         cdef double [:, ::1] theta_self = theta_self_numpy
 
         for i in range(1, nr - 1):
-            for j in range(1, ntheta + 1):
+            for j in range(0, ntheta):
                 mesh_ind = mesh.get_index_from_i_j(i, j - 1)
                 ind_minus = mesh.get_index_from_i_j(i - 1, j - 1)
                 ind_plus = mesh.get_index_from_i_j(i + 1, j - 1)
@@ -152,13 +156,29 @@ class Diffusion:
             bnd_wall.set_bnd_vals(u, flux_values)
 
             # Assign values to ghost cells for periodicity in theta direction
-            for i in range(nr):
-                u[i, 0] = u[i, ntheta]
-                u[i, ntheta + 1] = u[i, 1]
+            for i in range(1, nr - 1):
+                u_zero[i] = u[i, ntheta]
+                u_twopi[i] = u[i, 1]
+
+                # Calculating for points theta = 0
+                # Staggered grid scheme to evaluate derivatives in radial direction
+                du_perp[i, 0] = (r_plus[i, 0]*(u[i + 1, 0] - u[i, 0]) - r_minus[i, 0]*(u[i, 0] - u[i - 1, 0])) / (
+                    r_self[i, 0]*dr*dr)
+                # Second order central difference components in theta direction
+                du_perp[i, 0] += (u_twopi[i] + u[i, 1] - 2*u[i, 0]) / (r_self[i, 0]*r_self[i, 0]*dtheta*dtheta)
+
+                # Calculating for points theta = 2*pi - dtheta
+                # Staggered grid scheme to evaluate derivatives in radial direction
+                du_perp[i, ntheta - 1] = (r_plus[i, ntheta - 2]*(u[i + 1, ntheta - 1] - u[i, ntheta - 1]) -
+                    r_minus[i, ntheta - 1]*(u[i, ntheta - 1] - u[i - 1, ntheta - 1])) / (r_self[i, ntheta - 1]*dr*dr)
+                # Second order central difference components in theta direction
+                du_perp[i, ntheta - 1] += (u[i, ntheta - 2] + u_zero[i] - 2*u[i, ntheta - 1]) /
+                    (r_self[i, ntheta - 1]*r_self[i, ntheta - 1]*dtheta*dtheta)
 
             # Iterate over physical points in lexicographic fashion
+            # Skip points at theta = 0 and theta = 2*pi - dtheta
             for i in range(1, nr - 1):
-                for j in range(1, ntheta + 1):
+                for j in range(1, ntheta - 1):
                     # Staggered grid scheme to evaluate derivatives in radial direction
                     du_perp[i, j] = (r_plus[i, j]*(u[i + 1, j] - u[i, j]) - r_minus[i, j]*(u[i, j] - u[i - 1, j])) / (
                                r_self[i, j]*dr*dr)
@@ -168,7 +188,7 @@ class Diffusion:
 
             # Update scheme
             for i in range(1, nr - 1):
-                for j in range(1, ntheta + 1):
+                for j in range(0, ntheta):
                     u[i, j] += dt*diffc_perp*du_perp[i, j]
 
             # Write data to coupling interface preCICE

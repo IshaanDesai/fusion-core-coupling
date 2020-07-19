@@ -23,13 +23,14 @@ class Mesh:
     """
     def __init__(self, config):
         """
-        :param config_file_name:
+        :param config:
         """
         self.logger = logging.getLogger('main.mesh_2d.Mesh')
 
         self._dims = config.get_dims()
         self._rmin = config.get_rmin()
         self._rmax = config.get_rmax()
+        self._r_points = config.get_r_points()
         self._theta_points = config.get_theta_points()
 
         self._polar_coords_r = None  # Initialized in create_mesh function
@@ -44,16 +45,14 @@ class Mesh:
         self._mesh_i, self._mesh_j = None, None  # Initialized in create_mesh function
 
         self._mesh_count, self._grid_count, self._ghostcore_count, self._ghostwall_count = 0, 0, 0, 0
-        self._r_points = config.get_r_points()
 
         self._create_mesh()
 
     def _create_mesh(self):
         self._r_spacing = (self._rmax - self._rmin) / (self._r_points - 1)
-        theta_spacing = 2*math.pi / self._theta_points
+        self._theta_spacing = 2*math.pi / self._theta_points
 
-        self.logger.info('r_points = %d, theta_points = %d', self._r_points, self._theta_points)
-        self.logger.info('r_spacing = %d, theta_spacing = %d', self._r_spacing, theta_spacing)
+        self.logger.info('r_spacing = %d, theta_spacing = %d', self._r_spacing, self._theta_spacing)
         self.logger.info('Polar mesh has %d points', self._r_points*self._theta_points)
 
         self._polar_coords_r = np.zeros((self._r_points, self._theta_points))
@@ -71,7 +70,7 @@ class Mesh:
 
         r_val = self._rmin
         for i in range(self._r_points):
-            theta_val = -theta_spacing
+            theta_val = 0
             for j in range(self._theta_points):
                 self._polar_coords_r[i, j] = r_val
                 self._polar_coords_theta[i, j] = theta_val
@@ -96,7 +95,7 @@ class Mesh:
                 self._mesh_i[self._mesh_count] = i
                 self._mesh_j[self._mesh_count] = j
 
-                theta_val += theta_spacing
+                theta_val += self._theta_spacing
                 self._mesh_count += 1
 
             r_val += self._r_spacing
@@ -165,3 +164,5 @@ class Mesh:
     def get_r_spacing(self):
         return self._r_spacing
 
+    def get_theta_spacing(self):
+        return self._theta_spacing
