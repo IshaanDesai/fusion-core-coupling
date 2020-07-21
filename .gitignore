@@ -7,3 +7,5 @@ diffusion_core/modules/*.cpython-36m-x86_64-linux-gnu.so
 diffusion_core/modules/*.c
 *.out
 *.log
+diffusion_core/__pycache__/*
+diffusion_core/modules/__pycache__/*

@@ -69,8 +69,8 @@ cdef class MMS:
         """
         error_abs, mms_sum = 0, 0
         for i in range(1, self.nr - 1):
-            for j in range(1, self.ntheta + 1):
-                mesh_ind = mesh.get_index_from_i_j(i, j - 1)
+            for j in range(self.ntheta):
+                mesh_ind = mesh.get_index_from_i_j(i, j)
                 r = mesh.get_r(mesh_ind)
                 theta = mesh.get_theta(mesh_ind)
                 eval = self.mms_soln(r, theta, t)

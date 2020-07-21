@@ -19,7 +19,7 @@ def set_bnd_vals(mesh, data, field):
     nr, ntheta = mesh.get_n_points_axiswise()
     counter = 0
     for i in range(nr):
-        for j in range(1, ntheta + 1):
+        for j in range(ntheta):
             # Point type is a list and not a numpy array so it requires different index accessing
             if mesh.get_point_type(i, j - 1) == MeshVertexType.GHOST:
                 field[i, j] = data[counter]

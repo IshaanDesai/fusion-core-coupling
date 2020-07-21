@@ -28,7 +28,7 @@ def write_vtk(field, mesh, t):
                 point_type[i, j, 0] = 1
             elif mesh.get_point_type(i, j) == MeshVertexType.CORE:
                 point_type[i, j, 0] = 0
-            field_out[i, j, 0] = field[i, j+1]
+            field_out[i, j, 0] = field[i, j]
             counter += 1
 
     gridToVTK("./output/"+filename, x_out, y_out, z_out, pointData={"field": field_out, "type": point_type})

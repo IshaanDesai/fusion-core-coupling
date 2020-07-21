@@ -11,14 +11,14 @@
       "r_inner": 0.2,
       "r_outer": 0.5,
       "radial_points": 200,
-      "circular_points": 600
+      "circular_points": 400
   },
   "diffusion_parameters": {
     "coeff_perp": 0.01
   },
   "simulation_parameters": {
       "total_time": 1.0,
-      "timestep": 2.08E-5,
+      "timestep": 6.25E-5,
       "t_output": 0.1
   },
   "init_conditions": {

@@ -30,18 +30,25 @@ class Diffusion:
         cdef Py_ssize_t i, j
 
         # Mesh setup
-        mesh = Mesh(problem_config_file)
+        mesh = Mesh(config)
         nr, ntheta = config.get_r_points(), config.get_theta_points()
         rmin, rmax = config.get_rmin(), config.get_rmax()
 
         # Create MMS module object
         mms = MMS(config, mesh)
 
-        # Definition of field variable
-        u_numpy = np.zeros((nr, ntheta + 2), dtype=np.double)
-        cdef double [:, ::1] u = u_numpy
-        du_perp_numpy = np.zeros((nr, ntheta + 2), dtype=np.double)
-        cdef double [:, ::1] du_perp = du_perp_numpy
+        # Field variable array
+        u_np = np.zeros((nr, ntheta), dtype=np.double)
+        cdef double [:, ::1] u = u_np
+        # Field delta change array
+        du_perp_np = np.zeros((nr, ntheta), dtype=np.double)
+        cdef double [:, ::1] du_perp = du_perp_np
+        # Field array at theta = 0 (for periodicity)
+        u_zero_np = np.zeros(nr, dtype=np.double)
+        cdef double [::1] u_zero = u_zero_np
+        # Field array at theta = 2*pi - dtheta (for periodicity)
+        u_twopi_np = np.zeros(nr, dtype=np.double)
+        cdef double [::1] u_twopi = u_twopi_np
 
         # Initializing Gaussian blob as initial condition of field
         # x_center, y_center = config.get_xb_yb()
@@ -79,24 +86,24 @@ class Diffusion:
         cdef int n_out = int(t_out/dt)
 
         cdef double dr = mesh.get_r_spacing()
-        cdef double dtheta = 2 * math.pi / config.get_theta_points()
+        cdef double dtheta = mesh.get_theta_spacing()
 
         # Calculate radius and theta values at each grid point
-        r_self_numpy = np.zeros((nr, ntheta + 2), dtype=np.double)
-        cdef double [:, ::1] r_self = r_self_numpy
-        r_minus_numpy = np.zeros((nr, ntheta + 2), dtype=np.double)
-        cdef double [:, ::1] r_minus = r_minus_numpy
-        r_plus_numpy = np.zeros((nr, ntheta + 2), dtype=np.double)
-        cdef double [:, ::1] r_plus = r_plus_numpy
+        r_self_np = np.zeros((nr, ntheta), dtype=np.double)
+        cdef double [:, ::1] r_self = r_self_np
+        r_minus_np = np.zeros((nr, ntheta), dtype=np.double)
+        cdef double [:, ::1] r_minus = r_minus_np
+        r_plus_np = np.zeros((nr, ntheta), dtype=np.double)
+        cdef double [:, ::1] r_plus = r_plus_np
 
-        theta_self_numpy = np.zeros((nr, ntheta + 2), dtype=np.double)
-        cdef double [:, ::1] theta_self = theta_self_numpy
+        theta_self_np = np.zeros((nr, ntheta), dtype=np.double)
+        cdef double [:, ::1] theta_self = theta_self_np
 
         for i in range(1, nr - 1):
-            for j in range(1, ntheta + 1):
-                mesh_ind = mesh.get_index_from_i_j(i, j - 1)
-                ind_minus = mesh.get_index_from_i_j(i - 1, j - 1)
-                ind_plus = mesh.get_index_from_i_j(i + 1, j - 1)
+            for j in range(ntheta):
+                mesh_ind = mesh.get_index_from_i_j(i, j)
+                ind_minus = mesh.get_index_from_i_j(i - 1, j)
+                ind_plus = mesh.get_index_from_i_j(i + 1, j)
                 # r_(i,j) value
                 r_self[i, j] = mesh.get_r(mesh_ind)
                 # r_(i-1/2,j) value
@@ -118,23 +125,38 @@ class Diffusion:
         cdef double u_sum
         for n in range(n_t):
             # Assign values to ghost cells for periodicity in theta direction
-            for i in range(nr):
-                u[i, 0] = u[i, ntheta]
-                u[i, ntheta + 1] = u[i, 1]
+            for i in range(1, nr - 1):
+                u_zero[i] = u[i, ntheta - 1]
+                u_twopi[i] = u[i, 1]
+
+                # Calculating for points theta = 0
+                # Staggered grid scheme to evaluate derivatives in radial direction
+                du_perp[i, 0] = (r_plus[i, 0]*(u[i+1, 0] - u[i, 0]) - r_minus[i, 0]*(u[i, 0] - u[i-1, 0])) / (
+                    r_self[i, 0]*dr*dr)
+                # Second order central difference components in theta direction
+                du_perp[i, 0] += (u_zero[i] + u[i, 1] - 2*u[i, 0]) / (r_self[i, 0]*r_self[i, 0]*dtheta*dtheta)
+
+                # Calculating for points theta = 2*pi - dtheta
+                # Staggered grid scheme to evaluate derivatives in radial direction
+                du_perp[i, ntheta-1] = (r_plus[i, ntheta-2]*(u[i + 1, ntheta-1] - u[i, ntheta-1]) -
+                    r_minus[i, ntheta-1]*(u[i, ntheta-1] - u[i-1, ntheta-1])) / (r_self[i, ntheta-1]*dr*dr)
+                # Second order central difference components in theta direction
+                du_perp[i, ntheta-1] += (u[i, ntheta-2] + u_twopi[i] - 2*u[i, ntheta-1]) / (
+                    r_self[i, ntheta-1]*r_self[i, ntheta-1]*dtheta*dtheta)
 
             # Iterate over all grid points in a Cartesian grid fashion
             for i in range(1, nr - 1):
-                for j in range(1, ntheta + 1):
+                for j in range(1, ntheta - 1):
                     # Staggered grid scheme to evaluate derivatives in radial direction
-                    du_perp[i, j] = (r_plus[i, j]*(u[i + 1, j] - u[i, j]) - r_minus[i, j]*(u[i, j] - u[i - 1, j])) / (
+                    du_perp[i, j] = (r_plus[i, j]*(u[i+1, j] - u[i, j]) - r_minus[i, j]*(u[i, j] - u[i-1, j])) / (
                                r_self[i, j]*dr*dr)
 
                     # Second order central difference components in theta direction
-                    du_perp[i, j] += (u[i, j - 1] + u[i, j + 1] - 2*u[i, j]) / (r_self[i, j]*r_self[i, j]*dtheta*dtheta)
+                    du_perp[i, j] += (u[i, j-1] + u[i, j+1] - 2*u[i, j]) / (r_self[i, j]*r_self[i, j]*dtheta*dtheta)
 
             # Update scheme
             for i in range(1, nr - 1):
-                for j in range(1, ntheta + 1):
+                for j in range(ntheta):
                     u[i, j] += dt*diffc_perp*du_perp[i, j] + dt*mms.source_term(r_self[i, j], theta_self[i, j], n*dt)
 
             if n%n_out==0 or n==n_t-1:
@@ -142,7 +164,7 @@ class Diffusion:
                 self.logger.info('VTK file output written at t = %f', n*dt)
                 u_sum = 0
                 for i in range(nr):
-                    for j in range(1, ntheta + 1):
+                    for j in range(0, ntheta):
                         u_sum += u[i, j]
 
                 self.logger.info('Elapsed time = %f  || Field sum = %f', n*dt, u_sum/(nr*ntheta))
