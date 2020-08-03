@@ -80,7 +80,7 @@ class Diffusion:
 
         # Setup boundary conditions at inner and outer edge of the torus
         bndvals_wall = np.zeros((mesh.get_n_points_ghostwall(), 2))
-        bnd_wall = Boundary(mesh, bndvals_wall, u, BoundaryType.NEUMANN, MeshVertexType.GHOST_WALL)
+        bnd_wall = Boundary(mesh, bndvals_wall, u, BoundaryType.NEUMANN_SO, MeshVertexType.GHOST_WALL)
         bndvals_core = np.zeros(mesh.get_n_points_ghostcore())
         bnd_core = Boundary(mesh, bndvals_core, u, BoundaryType.DIRICHLET, MeshVertexType.GHOST_CORE)
 
@@ -150,23 +150,23 @@ class Diffusion:
             flux_values = self._interface.read_block_vector_data(self._read_data_id, self._vertex_ids)
             bnd_wall.set_bnd_vals(u, flux_values)
 
-        for n in range(n_t):
-            # Assign values to ghost cells for periodicity in theta direction
-            for i in range(1, nr - 1):
-                # Calculating for points theta = 0
-                # Staggered grid scheme to evaluate derivatives in radial direction
-                du_perp[i, 0] = (r_plus[i, 0]*(u[i+1, 0] - u[i, 0]) - r_minus[i, 0]*(u[i, 0] - u[i-1, 0])) / (
-                    r_self[i, 0]*dr*dr)
-                # Second order central difference components in theta direction
-                du_perp[i, 0] += (u[i, ntheta-1] + u[i, 1] - 2*u[i, 0]) / (r_self[i, 0]*r_self[i, 0]*dtheta*dtheta)
+            for n in range(n_t):
+                # Assign values to ghost cells for periodicity in theta direction
+                for i in range(1, nr - 1):
+                    # Calculating for points theta = 0
+                    # Staggered grid scheme to evaluate derivatives in radial direction
+                    du_perp[i, 0] = (r_plus[i, 0]*(u[i+1, 0] - u[i, 0]) - r_minus[i, 0]*(u[i, 0] - u[i-1, 0])) / (
+                        r_self[i, 0]*dr*dr)
+                    # Second order central difference components in theta direction
+                    du_perp[i, 0] += (u[i, ntheta-1] + u[i, 1] - 2*u[i, 0]) / (r_self[i, 0]*r_self[i, 0]*dtheta*dtheta)
 
-                # Calculating for points theta = 2*pi - dtheta
-                # Staggered grid scheme to evaluate derivatives in radial direction
-                du_perp[i, ntheta-1] = (r_plus[i, ntheta-1]*(u[i+1, ntheta-1] - u[i, ntheta-1]) -
-                    r_minus[i, ntheta-1]*(u[i, ntheta-1] - u[i-1, ntheta-1])) / (r_self[i, ntheta-1]*dr*dr)
-                # Second order central difference components in theta direction
-                du_perp[i, ntheta-1] += (u[i, ntheta-2] + u[i, 0] - 2*u[i, ntheta-1]) / (
-                    r_self[i, ntheta-1]*r_self[i, ntheta-1]*dtheta*dtheta)
+                    # Calculating for points theta = 2*pi - dtheta
+                    # Staggered grid scheme to evaluate derivatives in radial direction
+                    du_perp[i, ntheta-1] = (r_plus[i, ntheta-1]*(u[i+1, ntheta-1] - u[i, ntheta-1]) -
+                        r_minus[i, ntheta-1]*(u[i, ntheta-1] - u[i-1, ntheta-1])) / (r_self[i, ntheta-1]*dr*dr)
+                    # Second order central difference components in theta direction
+                    du_perp[i, ntheta-1] += (u[i, ntheta-2] + u[i, 0] - 2*u[i, ntheta-1]) / (
+                        r_self[i, ntheta-1]*r_self[i, ntheta-1]*dtheta*dtheta)
 
             # Assign values to ghost cells for periodicity in theta direction
             for i in range(1, nr - 1):

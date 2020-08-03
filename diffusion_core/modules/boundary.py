@@ -12,7 +12,8 @@ class BoundaryType(enum.Enum):
     Defines vertex types: Physical vertex (CORE), and boundary vertex (GHOST).
     """
     DIRICHLET = 2
-    NEUMANN = 3
+    NEUMANN_FO = 3
+    NEUMANN_SO = 4
 
 
 class Boundary:
@@ -57,13 +58,21 @@ class Boundary:
                 for j in self._bnd_j:
                     field[i, j] = data[counter]
                     counter += 1
-        elif self._bnd_type == BoundaryType.NEUMANN:
+        elif self._bnd_type == BoundaryType.NEUMANN_FO:
             for i in self._bnd_i:
                 for j in self._bnd_j:
                     # Calculate flux from components
                     flux = data[counter, 0]*(self._x[counter]/self._r[counter]) + data[counter, 1]*(self._y[counter]/self._r[counter])
                     # Modify boundary value by first order evaluation of gradient
                     field[i, j] = field[i + 1, j] + flux * self._dr
+                    counter += 1
+        elif self._bnd_type == BoundaryType.NEUMANN_SO:
+            for i in self._bnd_i:
+                for j in self._bnd_j:
+                    # Calculate flux from components
+                    flux = data[counter, 0]*(self._x[counter]/self._r[counter]) + data[counter, 1]*(self._y[counter]/self._r[counter])
+                    # Modify boundary value by first order evaluation of gradient
+                    field[i, j] = (4/3)*field[i-1, j] - (2/3)*field[i-2, j] - (2/3)*self._dr*flux
                     counter += 1
 
     def get_bnd_vals(self, field):
