@@ -40,11 +40,19 @@ class Boundary:
                     if self._bnd_type == BoundaryType.DIRICHLET:
                         field[i, j] = data[counter]
                         counter += 1
-                    elif self._bnd_type == BoundaryType.NEUMANN:
+                    elif self._bnd_type == BoundaryType.NEUMANN_FO:
                         # Calculate flux from components
-                        flux = data[counter, 0]*(x/r) + data[counter, 1]*(y/r)
+                        flux = data[counter, 0] * (self._x[counter] / self._r[counter]) + data[counter, 1] * (
+                            self._y[counter] / self._r[counter])
                         # Modify boundary value by first order evaluation of gradient
-                        field[i, j] = field[i + 1, j] + flux*self._dr
+                        field[i, j] = field[i + 1, j] + flux * self._dr
+                        counter += 1
+                    elif self._bnd_type == BoundaryType.NEUMANN_SO:
+                        # Calculate flux from components
+                        flux = data[counter, 0] * (self._x[counter] / self._r[counter]) + data[counter, 1] * (
+                            self._y[counter] / self._r[counter])
+                        # Modify boundary value by first order evaluation of gradient
+                        field[i, j] = (4 / 3) * field[i - 1, j] - (2 / 3) * field[i - 2, j] - (2 / 3) * self._dr * flux
                         counter += 1
 
                 self._r.append(r)
