@@ -28,12 +28,12 @@ class Boundary:
 
         counter = 0
         for i in range(self._nr):
-            for j in range(1, self._ntheta + 1):
-                mesh_ind = mesh.get_index_from_i_j(i, j - 1)
+            for j in range(1, self._ntheta - 1):
+                mesh_ind = mesh.get_index_from_i_j(i, j)
                 r = mesh.get_r(mesh_ind)
                 x = mesh.get_x(mesh_ind)
                 y = mesh.get_y(mesh_ind)
-                point_type = mesh.get_point_type(i, j - 1)
+                point_type = mesh.get_point_type(i, j)
                 if point_type == self._layer_type:
                     self._bnd_i.append(i)
                     self._bnd_j.append(j)
@@ -45,14 +45,14 @@ class Boundary:
                         flux = data[counter, 0] * (self._x[counter] / self._r[counter]) + data[counter, 1] * (
                             self._y[counter] / self._r[counter])
                         # Modify boundary value by first order evaluation of gradient
-                        field[i, j] = field[i + 1, j] + flux * self._dr
+                        field[i, j] = field[i + 1, j] + flux*self._dr
                         counter += 1
                     elif self._bnd_type == BoundaryType.NEUMANN_SO:
                         # Calculate flux from components
                         flux = data[counter, 0] * (self._x[counter] / self._r[counter]) + data[counter, 1] * (
                             self._y[counter] / self._r[counter])
                         # Modify boundary value by second order evaluation of gradient
-                        field[i, j] = (4 / 3) * field[i + 1, j] - (2 / 3) * field[i + 2, j] - (2 / 3) * self._dr * flux
+                        field[i, j] = (4/3)*field[i + 1, j] - (1/3)*field[i + 2, j] - (2/3)*self._dr*flux
                         counter += 1
 
                 self._r.append(r)
@@ -72,7 +72,7 @@ class Boundary:
                     # Calculate flux from components
                     flux = data[counter, 0]*(self._x[counter]/self._r[counter]) + data[counter, 1]*(self._y[counter]/self._r[counter])
                     # Modify boundary value by first order evaluation of gradient
-                    field[i, j] = field[i + 1, j] + flux * self._dr
+                    field[i, j] = field[i + 1, j] + flux*self._dr
                     counter += 1
         elif self._bnd_type == BoundaryType.NEUMANN_SO:
             for i in self._bnd_i:
@@ -80,7 +80,7 @@ class Boundary:
                     # Calculate flux from components
                     flux = data[counter, 0]*(self._x[counter]/self._r[counter]) + data[counter, 1]*(self._y[counter]/self._r[counter])
                     # Modify boundary value by second order evaluation of gradient
-                    field[i, j] = (4/3)*field[i+1, j] - (2/3)*field[i+2, j] - (2/3)*self._dr*flux
+                    field[i, j] = (4/3)*field[i + 1, j] - (1/3)*field[i + 2, j] - (2/3)*self._dr*flux
                     counter += 1
 
     def get_bnd_vals(self, field):
