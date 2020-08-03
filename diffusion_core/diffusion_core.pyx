@@ -150,46 +150,24 @@ class Diffusion:
             flux_values = self._interface.read_block_vector_data(self._read_data_id, self._vertex_ids)
             bnd_wall.set_bnd_vals(u, flux_values)
 
-            for n in range(n_t):
-                # Assign values to ghost cells for periodicity in theta direction
-                for i in range(1, nr - 1):
-                    # Calculating for points theta = 0
-                    # Staggered grid scheme to evaluate derivatives in radial direction
-                    du_perp[i, 0] = (r_plus[i, 0]*(u[i+1, 0] - u[i, 0]) - r_minus[i, 0]*(u[i, 0] - u[i-1, 0])) / (
-                        r_self[i, 0]*dr*dr)
-                    # Second order central difference components in theta direction
-                    du_perp[i, 0] += (u[i, ntheta-1] + u[i, 1] - 2*u[i, 0]) / (r_self[i, 0]*r_self[i, 0]*dtheta*dtheta)
-
-                    # Calculating for points theta = 2*pi - dtheta
-                    # Staggered grid scheme to evaluate derivatives in radial direction
-                    du_perp[i, ntheta-1] = (r_plus[i, ntheta-1]*(u[i+1, ntheta-1] - u[i, ntheta-1]) -
-                        r_minus[i, ntheta-1]*(u[i, ntheta-1] - u[i-1, ntheta-1])) / (r_self[i, ntheta-1]*dr*dr)
-                    # Second order central difference components in theta direction
-                    du_perp[i, ntheta-1] += (u[i, ntheta-2] + u[i, 0] - 2*u[i, ntheta-1]) / (
-                        r_self[i, ntheta-1]*r_self[i, ntheta-1]*dtheta*dtheta)
-
             # Assign values to ghost cells for periodicity in theta direction
             for i in range(1, nr - 1):
-                u_zero[i] = u[i, ntheta]
-                u_twopi[i] = u[i, 1]
-
                 # Calculating for points theta = 0
                 # Staggered grid scheme to evaluate derivatives in radial direction
-                du_perp[i, 0] = (r_plus[i, 0]*(u[i + 1, 0] - u[i, 0]) - r_minus[i, 0]*(u[i, 0] - u[i - 1, 0])) / (
+                du_perp[i, 0] = (r_plus[i, 0]*(u[i+1, 0] - u[i, 0]) - r_minus[i, 0]*(u[i, 0] - u[i-1, 0])) / (
                     r_self[i, 0]*dr*dr)
                 # Second order central difference components in theta direction
-                du_perp[i, 0] += (u_twopi[i] + u[i, 1] - 2*u[i, 0]) / (r_self[i, 0]*r_self[i, 0]*dtheta*dtheta)
+                du_perp[i, 0] += (u[i, ntheta-1] + u[i, 1] - 2*u[i, 0]) / (r_self[i, 0]*r_self[i, 0]*dtheta*dtheta)
 
                 # Calculating for points theta = 2*pi - dtheta
                 # Staggered grid scheme to evaluate derivatives in radial direction
-                du_perp[i, ntheta - 1] = (r_plus[i, ntheta - 2]*(u[i + 1, ntheta - 1] - u[i, ntheta - 1]) -
-                    r_minus[i, ntheta - 1]*(u[i, ntheta - 1] - u[i - 1, ntheta - 1])) / (r_self[i, ntheta - 1]*dr*dr)
+                du_perp[i, ntheta-1] = (r_plus[i, ntheta-1]*(u[i+1, ntheta-1] - u[i, ntheta-1]) -
+                    r_minus[i, ntheta-1]*(u[i, ntheta-1] - u[i-1, ntheta-1])) / (r_self[i, ntheta-1]*dr*dr)
                 # Second order central difference components in theta direction
-                du_perp[i, ntheta - 1] += (u[i, ntheta - 2] + u_zero[i] - 2*u[i, ntheta - 1]) /
-                    (r_self[i, ntheta - 1]*r_self[i, ntheta - 1]*dtheta*dtheta)
+                du_perp[i, ntheta-1] += (u[i, ntheta-2] + u[i, 0] - 2*u[i, ntheta-1]) / (
+                    r_self[i, ntheta-1]*r_self[i, ntheta-1]*dtheta*dtheta)
 
-            # Iterate over physical points in lexicographic fashion
-            # Skip points at theta = 0 and theta = 2*pi - dtheta
+            # Iterate over all grid points in a Cartesian grid fashion
             for i in range(1, nr - 1):
                 for j in range(1, ntheta - 1):
                     # Staggered grid scheme to evaluate derivatives in radial direction
@@ -201,7 +179,7 @@ class Diffusion:
 
             # Update scheme
             for i in range(1, nr - 1):
-                for j in range(0, ntheta):
+                for j in range(ntheta):
                     u[i, j] += dt*diffc_perp*du_perp[i, j]
 
             # Write data to coupling interface preCICE
