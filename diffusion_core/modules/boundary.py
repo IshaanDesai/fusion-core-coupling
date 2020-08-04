@@ -1,5 +1,5 @@
 """
-This module implements boundary conditions on the ghost points of a given mesh.
+This module implements boundary conditions on the boundary points of a given mesh.
 Dirichlet and Neumann boundary conditions can be implemented.
 For Neumann boundary conditions, the flux normal is in the inward directions (towards the center of polar grid).
 """
@@ -52,7 +52,7 @@ class Boundary:
                         flux = data[counter, 0] * (self._x[counter] / self._r[counter]) + data[counter, 1] * (
                             self._y[counter] / self._r[counter])
                         # Modify boundary value by second order evaluation of gradient
-                        field[i, j] = (4/3)*field[i + 1, j] - (1/3)*field[i + 2, j] - (2/3)*self._dr*flux
+                        field[i, j] = (4/3)*field[i - 1, j] - (1/3)*field[i - 2, j] - (2/3)*self._dr*flux
                         counter += 1
 
                 self._r.append(r)

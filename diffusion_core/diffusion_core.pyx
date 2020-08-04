@@ -43,10 +43,10 @@ class Diffusion:
 
         # Define coupling mesh (current definition assumes polar participant is Inner (Core) of Tokamak)
         vertices_x, vertices_y = [], []
-        for i in range(mesh.get_n_points_ghostwall()):
-            ghost_id = mesh.ghostwall_to_mesh_index(i)
-            vertices_x.append(mesh.get_x(ghost_id))
-            vertices_y.append(mesh.get_y(ghost_id))
+        for i in range(mesh.get_n_points_wall()):
+            wall_id = mesh.wall_to_mesh_index(i)
+            vertices_x.append(mesh.get_x(wall_id))
+            vertices_y.append(mesh.get_y(wall_id))
 
         self._coupling_mesh_vertices = np.stack([vertices_x, vertices_y], axis=1)
 
@@ -79,10 +79,10 @@ class Diffusion:
             u[i, j] = gaussx * gaussy
 
         # Setup boundary conditions at inner and outer edge of the torus
-        bndvals_wall = np.zeros((mesh.get_n_points_ghostwall(), 2))
-        bnd_wall = Boundary(mesh, bndvals_wall, u, BoundaryType.NEUMANN_SO, MeshVertexType.GHOST_WALL)
-        bndvals_core = np.zeros(mesh.get_n_points_ghostcore())
-        bnd_core = Boundary(mesh, bndvals_core, u, BoundaryType.DIRICHLET, MeshVertexType.GHOST_CORE)
+        bndvals_wall = np.zeros((mesh.get_n_points_wall(), 2))
+        bnd_wall = Boundary(mesh, bndvals_wall, u, BoundaryType.NEUMANN_SO, MeshVertexType.BC_WALL)
+        bndvals_core = np.zeros(mesh.get_n_points_core())
+        bnd_core = Boundary(mesh, bndvals_core, u, BoundaryType.DIRICHLET, MeshVertexType.BC_CORE)
 
         # Get parameters from config and mesh modules
         diffc_perp = self._config.get_diffusion_coeff()
@@ -140,15 +140,18 @@ class Diffusion:
         cdef double u_sum, t, t_cp
         cdef int n, n_cp
         while self._interface.is_coupling_ongoing():
-            if precice.is_action_required(precice.action_write_iteration_checkpoint()):  # write checkpoint
+            if self._interface.is_action_required(precice.action_write_iteration_checkpoint()):  # write checkpoint
                 u_cp = u
                 n_cp = n
                 t_cp = t
-                self.interface.mark_action_fulfilled(self.action_write_interation_checkpoint())
+                self._interface.mark_action_fulfilled(precice.action_write_iteration_checkpoint())
 
             # Read coupling data
             flux_values = self._interface.read_block_vector_data(self._read_data_id, self._vertex_ids)
             bnd_wall.set_bnd_vals(u, flux_values)
+
+            # Update time step
+            dt = min(precice_dt, dt)
 
             # Assign values to ghost cells for periodicity in theta direction
             for i in range(1, nr - 1):
@@ -189,11 +192,11 @@ class Diffusion:
             # Advance coupling via preCICE
             precice_dt = self._interface.advance(dt)
 
-            if precice.is_action_required(precice.action_read_iteration_checkpoint()):  # roll back to checkpoint
+            if self._interface.is_action_required(precice.action_read_iteration_checkpoint()):  # roll back to checkpoint
                 u = u_cp
                 n = n_cp
                 t = t_cp
-                self._interface.mark_action_fulfilled(self.action_read_iteration_checkpoint())
+                self._interface.mark_action_fulfilled(precice.action_read_iteration_checkpoint())
             else:  # update solution
                 n += 1
                 t += dt
@@ -209,5 +212,6 @@ class Diffusion:
                     self.logger.info('Elapsed time = %f  || Field sum = %f', n*dt, u_sum/(nr*ntheta))
                     self.logger.info('Elapsed CPU time = %f', time.clock())
 
+        self._interface.finalize()
         self.logger.info('Total CPU time = %f', time.clock())
         # End
