@@ -2,6 +2,9 @@
 This module implements boundary conditions on the boundary points of a given mesh.
 Dirichlet and Neumann boundary conditions can be implemented.
 For Neumann boundary conditions, the flux normal is in the inward directions (towards the center of polar grid).
+
+NOTE: Neumann boundary conditions are implemented with the assumption that only Wall Boundary points will have
+      Neumann conditions.
 """
 import enum
 import numpy as np
@@ -9,7 +12,7 @@ import numpy as np
 
 class BoundaryType(enum.Enum):
     """
-    Defines vertex types: Physical vertex (CORE), and boundary vertex (GHOST).
+    Defines boundary types: DIRICHLET = Dirichlet, NEUMANN_FO, NEUMANN_SO = Neumann first and second order.
     """
     DIRICHLET = 2
     NEUMANN_FO = 3
@@ -21,22 +24,21 @@ class Boundary:
         self._nr, self._ntheta = mesh.get_n_points_axiswise()
         self._dr = mesh.get_r_spacing()
 
-        self._bnd_i, self._bnd_j = [], []
+        self._bnd_inds = []
         self._r, self._x, self._y = [], [], []
         self._bnd_type = bnd_type
         self._layer_type = layer_type
 
         counter = 0
         for i in range(self._nr):
-            for j in range(1, self._ntheta - 1):
+            for j in range(self._ntheta):
                 mesh_ind = mesh.get_index_from_i_j(i, j)
                 r = mesh.get_r(mesh_ind)
                 x = mesh.get_x(mesh_ind)
                 y = mesh.get_y(mesh_ind)
                 point_type = mesh.get_point_type(i, j)
                 if point_type == self._layer_type:
-                    self._bnd_i.append(i)
-                    self._bnd_j.append(j)
+                    self._bnd_inds.append([i, j])
                     if self._bnd_type == BoundaryType.DIRICHLET:
                         field[i, j] = data[counter]
                         counter += 1
@@ -45,7 +47,7 @@ class Boundary:
                         flux = data[counter, 0] * (self._x[counter] / self._r[counter]) + data[counter, 1] * (
                             self._y[counter] / self._r[counter])
                         # Modify boundary value by first order evaluation of gradient
-                        field[i, j] = field[i + 1, j] + flux*self._dr
+                        field[i, j] = field[i - 1, j] + flux*self._dr
                         counter += 1
                     elif self._bnd_type == BoundaryType.NEUMANN_SO:
                         # Calculate flux from components
@@ -62,31 +64,30 @@ class Boundary:
     def set_bnd_vals(self, field, data):
         counter = 0
         if self._bnd_type == BoundaryType.DIRICHLET:
-            for i in self._bnd_i:
-                for j in self._bnd_j:
-                    field[i, j] = data[counter]
-                    counter += 1
+            for inds in self._bnd_inds:
+                field[inds[0], inds[1]] = data[counter]
+                counter += 1
         elif self._bnd_type == BoundaryType.NEUMANN_FO:
-            for i in self._bnd_i:
-                for j in self._bnd_j:
-                    # Calculate flux from components
-                    flux = data[counter, 0]*(self._x[counter]/self._r[counter]) + data[counter, 1]*(self._y[counter]/self._r[counter])
-                    # Modify boundary value by first order evaluation of gradient
-                    field[i, j] = field[i + 1, j] + flux*self._dr
-                    counter += 1
+            counter = 0
+            for inds in self._bnd_inds:
+                # Calculate flux from components
+                flux = data[counter, 0]*(self._x[counter]/self._r[counter]) + data[counter, 1]*(self._y[counter]/self._r[counter])
+                # Modify boundary value by first order evaluation of gradient
+                field[inds[0], inds[1]] = field[inds[0] - 1, inds[1]] + flux*self._dr
+                counter += 1
         elif self._bnd_type == BoundaryType.NEUMANN_SO:
-            for i in self._bnd_i:
-                for j in self._bnd_j:
-                    # Calculate flux from components
-                    flux = data[counter, 0]*(self._x[counter]/self._r[counter]) + data[counter, 1]*(self._y[counter]/self._r[counter])
-                    # Modify boundary value by second order evaluation of gradient
-                    field[i, j] = (4/3)*field[i + 1, j] - (1/3)*field[i + 2, j] - (2/3)*self._dr*flux
-                    counter += 1
+            counter = 0
+            for inds in self._bnd_inds:
+                # Calculate flux from components
+                flux = data[counter, 0]*(self._x[counter]/self._r[counter]) + data[counter, 1]*(self._y[counter]/self._r[counter])
+                # Modify boundary value by second order evaluation of gradient
+                field[inds[0], inds[1]] = (4/3)*field[inds[0] - 1, inds[1]] - (1/3)*field[inds[0] - 2, inds[1]] - (2/3)*self._dr*flux
+                counter += 1
 
     def get_bnd_vals(self, field):
         bnd_data = []
-        for i in self._bnd_i:
-            for j in self._bnd_j:
-                bnd_data.append(field[i, j])
+        # Gets Dirichlet values and returns them for coupling
+        for inds in self._bnd_inds:
+            bnd_data.append(field[inds[0], inds[1]])
 
         return np.array(bnd_data)

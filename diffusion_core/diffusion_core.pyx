@@ -137,8 +137,10 @@ class Diffusion:
         self.logger.info('Initial state: VTK file output written at t = %f', 0)
 
         # Time loop
-        cdef double u_sum, t, t_cp
-        cdef int n, n_cp
+        cdef double u_sum, t_cp
+        cdef int n_cp
+        cdef int n = 0
+        cdef double t = 0.0
         while self._interface.is_coupling_ongoing():
             if self._interface.is_action_required(precice.action_write_iteration_checkpoint()):  # write checkpoint
                 u_cp = u
@@ -206,7 +208,7 @@ class Diffusion:
                     self.logger.info('VTK file output written at t = %f', n*dt)
                     u_sum = 0
                     for i in range(nr):
-                        for j in range(1, ntheta + 1):
+                        for j in range(ntheta):
                             u_sum += u[i, j]
 
                     self.logger.info('Elapsed time = %f  || Field sum = %f', n*dt, u_sum/(nr*ntheta))
