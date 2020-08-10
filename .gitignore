@@ -11,3 +11,4 @@ diffusion_core.egg-info/
 dist/
 diffusion_core/__pycache__/*
 diffusion_core/modules/__pycache__/*
+diffusion_core/diffusion_core.cpython-37m-x86_64-linux-gnu.so

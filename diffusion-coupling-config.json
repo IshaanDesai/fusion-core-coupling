@@ -17,9 +17,9 @@
     "coeff_perp": 0.01
   },
   "simulation_parameters": {
-      "total_time": 1.0,
-      "timestep": 2.5E-4,
-      "t_output": 0.1
+      "total_time": 0.1,
+      "timestep": 1.0E-4,
+      "t_output": 0.001
   },
   "init_conditions": {
       "xb": 0.0,
