@@ -8,8 +8,7 @@ cimport cython
 from diffusion_core.modules.mesh_2d import Mesh, MeshVertexType
 from diffusion_core.modules.output import write_vtk
 from diffusion_core.modules.config import Config
-from diffusion_core.modules.boundary import set_bnd_vals
-from diffusion_core.modules.initialization import gaussian_blob
+from diffusion_core.modules.boundary import Boundary, BoundaryType
 from diffusion_core.modules.mms cimport MMS
 import math
 import time
@@ -44,19 +43,6 @@ class Diffusion:
         du_perp_np = np.zeros((nr, ntheta), dtype=np.double)
         cdef double [:, ::1] du_perp = du_perp_np
 
-        # Initializing Gaussian blob as initial condition of field
-        # x_center, y_center = config.get_xb_yb()
-        # x_width, y_width = config.get_wxb_wyb()
-        # for l in range(mesh.get_n_points_grid()):
-        #     mesh_ind = mesh.grid_to_mesh_index(l)
-        #     x = mesh.get_x(mesh_ind)
-        #     y = mesh.get_y(mesh_ind)
-        #     gaussx = gaussian_blob(x_center, x_width, x)
-        #     gaussy = gaussian_blob(y_center, y_width, y)
-
-        #     i, j = mesh.get_i_j_from_index(mesh_ind)
-        #     u[i, j] = gaussx * gaussy
-
         # Initializing custom initial state for MMS analysis
         for l in range(mesh.get_n_points_grid()):
             mesh_ind = mesh.grid_to_mesh_index(l)
@@ -67,8 +53,10 @@ class Diffusion:
             u[i, j] = mms.init_mms(radialp, thetap)
 
         # Setup Dirichlet boundary conditions at inner and outer edge of the torus
-        bnd_vals = np.zeros(mesh.get_n_points_ghost())
-        set_bnd_vals(mesh, bnd_vals, u)
+        bndvals_wall = np.zeros((mesh.get_n_points_wall(), 2))
+        bnd_wall = Boundary(mesh, bndvals_wall, u, BoundaryType.NEUMANN_SO, MeshVertexType.BC_WALL)
+        bndvals_core = np.zeros((mesh.get_n_points_core()))
+        bnd_core = Boundary(mesh, bndvals_core, u, BoundaryType.DIRICHLET, MeshVertexType.BC_CORE)
 
         # Get parameters from config and mesh modules
         diffc_perp = config.get_diffusion_coeff()
@@ -149,6 +137,9 @@ class Diffusion:
             for i in range(1, nr - 1):
                 for j in range(ntheta):
                     u[i, j] += dt*diffc_perp*du_perp[i, j] + dt*mms.source_term(r_self[i, j], theta_self[i, j], n*dt)
+
+            bnd_wall.set_bnd_vals(u, bndvals_wall)
+            bnd_core.set_bnd_vals(u, bndvals_core)
 
             if n%n_out==0 or n==n_t-1:
                 write_vtk(u, mesh, n)

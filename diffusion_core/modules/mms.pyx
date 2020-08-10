@@ -68,7 +68,7 @@ cdef class MMS:
         :return:
         """
         error_abs, mms_sum = 0, 0
-        for i in range(1, self.nr - 1):
+        for i in range(self.nr):
             for j in range(self.ntheta):
                 mesh_ind = mesh.get_index_from_i_j(i, j)
                 r = mesh.get_r(mesh_ind)

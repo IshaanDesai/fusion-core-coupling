@@ -24,13 +24,11 @@ def write_vtk(field, mesh, t):
             x_out[i, j, 0] = mesh.get_x(counter)
             y_out[i, j, 0] = mesh.get_y(counter)
             z_out[i, j, 0] = 0
-            if mesh.get_point_type(i, j) == MeshVertexType.GHOST:
+            if mesh.get_point_type(i, j) == MeshVertexType.BC_CORE or mesh.get_point_type(i, j) == MeshVertexType.BC_WALL:
                 point_type[i, j, 0] = 1
-            elif mesh.get_point_type(i, j) == MeshVertexType.CORE:
+            elif mesh.get_point_type(i, j) == MeshVertexType.GRID:
                 point_type[i, j, 0] = 0
             field_out[i, j, 0] = field[i, j]
             counter += 1
 
-    gridToVTK("./output/"+filename, x_out, y_out, z_out, pointData={"field": field_out, "type": point_type})
-
-
+    gridToVTK("/draco/u/idesai/fusioncoupling-polar/output/"+filename, x_out, y_out, z_out, pointData={"field": field_out, "type": point_type})
