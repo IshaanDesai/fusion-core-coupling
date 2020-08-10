@@ -31,8 +31,6 @@ class Diffusion:
         self._vertex_ids = None
 
     def solve_diffusion(self):
-        self.logger.info('Solving Diffusion case')
-
         # Iterators
         cdef Py_ssize_t i, j
 
@@ -150,6 +148,7 @@ class Diffusion:
 
             # Read coupling data
             flux_values = self._interface.read_block_vector_data(self._read_data_id, self._vertex_ids)
+            self.logger.info('Sum of flux values from read data = {}'.format(np.sum(flux_values)))
             bnd_wall.set_bnd_vals(u, flux_values)
 
             # Update time step
@@ -165,10 +164,8 @@ class Diffusion:
                 du_perp[i, 0] += (u[i, ntheta-1] + u[i, 1] - 2*u[i, 0]) / (r_self[i, 0]*r_self[i, 0]*dtheta*dtheta)
 
                 # Calculating for points theta = 2*pi - dtheta
-                # Staggered grid scheme to evaluate derivatives in radial direction
                 du_perp[i, ntheta-1] = (r_plus[i, ntheta-1]*(u[i+1, ntheta-1] - u[i, ntheta-1]) -
                     r_minus[i, ntheta-1]*(u[i, ntheta-1] - u[i-1, ntheta-1])) / (r_self[i, ntheta-1]*dr*dr)
-                # Second order central difference components in theta direction
                 du_perp[i, ntheta-1] += (u[i, ntheta-2] + u[i, 0] - 2*u[i, ntheta-1]) / (
                     r_self[i, ntheta-1]*r_self[i, ntheta-1]*dtheta*dtheta)
 
@@ -178,7 +175,6 @@ class Diffusion:
                     # Staggered grid scheme to evaluate derivatives in radial direction
                     du_perp[i, j] = (r_plus[i, j]*(u[i+1, j] - u[i, j]) - r_minus[i, j]*(u[i, j] - u[i-1, j])) / (
                                r_self[i, j]*dr*dr)
-
                     # Second order central difference components in theta direction
                     du_perp[i, j] += (u[i, j-1] + u[i, j+1] - 2*u[i, j]) / (r_self[i, j]*r_self[i, j]*dtheta*dtheta)
 
@@ -189,11 +185,13 @@ class Diffusion:
 
             # Write data to coupling interface preCICE
             scalar_values = bnd_wall.get_bnd_vals(u)
+            self.logger.info('Sum of scalar values before writing data = {}'.format(np.sum(scalar_values)))
             self._interface.write_block_scalar_data(self._write_data_id, self._vertex_ids, scalar_values)
 
             # Advance coupling via preCICE
             precice_dt = self._interface.advance(dt)
 
+            self.logger.info('After advancing coupling and before checkpoint check')
             if self._interface.is_action_required(precice.action_read_iteration_checkpoint()):  # roll back to checkpoint
                 u = u_cp
                 n = n_cp
