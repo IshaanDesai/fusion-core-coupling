@@ -112,5 +112,7 @@ class Boundary:
                 a = 2 * math.pi * (self._r[counter] - self._rmin) / (self._rmax - self._rmin)
                 b = 2 * math.pi / (self._rmax - self._rmin)
                 # NOTE: This implementation is only valid for Wall boundary cells (outer most cells)
-                field[inds[0], inds[1]] = b * math.cos(a) * math.cos(t) * math.cos(self._theta[counter])
+                flux = b * math.cos(a) * math.cos(t) * math.cos(self._theta[counter])
+                # Modify boundary value by second order evaluation of gradient
+                field[inds[0], inds[1]] = (4/3)*field[inds[0]-1, inds[1]] - (1/3)*field[inds[0]-2, inds[1]] + (2/3)*self._dr*flux
                 counter += 1
