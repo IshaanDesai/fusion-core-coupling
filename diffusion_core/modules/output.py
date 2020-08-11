@@ -31,4 +31,4 @@ def write_vtk(field, mesh, t):
             field_out[i, j, 0] = field[i, j]
             counter += 1
 
-    gridToVTK("/draco/u/idesai/fusioncoupling-polar/output/"+filename, x_out, y_out, z_out, pointData={"field": field_out, "type": point_type})
+    gridToVTK("./output/"+filename, x_out, y_out, z_out, pointData={"field": field_out, "type": point_type})

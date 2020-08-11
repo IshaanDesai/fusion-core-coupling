@@ -52,11 +52,15 @@ class Diffusion:
             i, j = mesh.get_i_j_from_index(mesh_ind)
             u[i, j] = mms.init_mms(radialp, thetap)
 
-        # Setup Dirichlet boundary conditions at inner and outer edge of the torus
+        # Initialize boundary conditions at inner and outer edge of the torus
         bndvals_wall = np.zeros((mesh.get_n_points_wall(), 2))
-        bnd_wall = Boundary(mesh, bndvals_wall, u, BoundaryType.NEUMANN_SO, MeshVertexType.BC_WALL)
+        bnd_wall = Boundary(config, mesh, bndvals_wall, u, BoundaryType.NEUMANN_SO, MeshVertexType.BC_WALL)
         bndvals_core = np.zeros((mesh.get_n_points_core()))
-        bnd_core = Boundary(mesh, bndvals_core, u, BoundaryType.DIRICHLET, MeshVertexType.BC_CORE)
+        bnd_core = Boundary(config, mesh, bndvals_core, u, BoundaryType.DIRICHLET, MeshVertexType.BC_CORE)
+
+        # Reset boundary conditions according to MMS ansatz
+        bnd_wall.set_bnd_vals_mms(u, 0)
+        bnd_core.set_bnd_vals_mms(u, 0)
 
         # Get parameters from config and mesh modules
         diffc_perp = config.get_diffusion_coeff()
@@ -138,8 +142,9 @@ class Diffusion:
                 for j in range(ntheta):
                     u[i, j] += dt*diffc_perp*du_perp[i, j] + dt*mms.source_term(r_self[i, j], theta_self[i, j], n*dt)
 
-            bnd_wall.set_bnd_vals(u, bndvals_wall)
-            bnd_core.set_bnd_vals(u, bndvals_core)
+            # Set Neumann boundary conditions in each iteration
+            bnd_wall.set_bnd_vals_mms(u, n*dt)
+            bnd_core.set_bnd_vals_mms(u, n*dt)
 
             if n%n_out==0 or n==n_t-1:
                 write_vtk(u, mesh, n)

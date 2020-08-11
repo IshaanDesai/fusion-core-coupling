@@ -18,7 +18,7 @@
   },
   "simulation_parameters": {
       "total_time": 1.0,
-      "timestep": 1.0E-3,
+      "timestep": 1E-3,
       "t_output": 0.1
   },
   "init_conditions": {
