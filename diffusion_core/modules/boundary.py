@@ -15,9 +15,9 @@ class BoundaryType(enum.Enum):
     """
     Defines boundary types: DIRICHLET = Dirichlet, NEUMANN_FO, NEUMANN_SO = Neumann first and second order.
     """
-    DIRICHLET = 2
-    NEUMANN_FO = 3
-    NEUMANN_SO = 4
+    DIRICHLET = 247
+    NEUMANN_FO = 333
+    NEUMANN_SO = 453
 
 
 class Boundary:

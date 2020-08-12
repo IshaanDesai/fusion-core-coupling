@@ -157,7 +157,8 @@ class Diffusion:
                 self.logger.info('Elapsed time = %f  || Field sum = %f', n*dt, u_sum/(nr*ntheta))
                 self.logger.info('Elapsed CPU time = %f', time.clock())
                 # Output L2 error for MMS
-                self.logger.info('dr = %f, dtheta = %f, dt = %f and at t = %f | L2 error = %f', dr, dtheta, dt, n*dt, mms.error_computation(mesh, u, n*dt))
+                l2_error, inf_error = mms.error_computation(mesh, u, n*dt)
+                self.logger.info('L2 error = {} | Inf error = {}'.format(l2_error, inf_error))
 
         self.logger.info('Total CPU time = %f', time.clock())
         # End

@@ -67,14 +67,19 @@ cdef class MMS:
         obtained by the discretized stencil
         :return:
         """
-        error_abs, mms_sum = 0, 0
+        error_abs_sqrd, mms_sum = 0, 0
+        nodal_error = []
         for i in range(self.nr):
             for j in range(self.ntheta):
                 mesh_ind = mesh.get_index_from_i_j(i, j)
                 r = mesh.get_r(mesh_ind)
                 theta = mesh.get_theta(mesh_ind)
                 eval = self.mms_soln(r, theta, t)
-                error_abs += (field[i, j] - eval)**2
+                error_abs_sqrd += (field[i, j] - eval)**2
                 mms_sum += eval**2
+                nodal_error.append(field[i, j] - eval)
 
-        return math.sqrt(error_abs)/math.sqrt(mms_sum)
+        l2_error = math.sqrt(error_abs_sqrd)/math.sqrt(mms_sum)
+        inf_error = max(nodal_error)
+
+        return l2_error, inf_error
