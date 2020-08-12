@@ -97,6 +97,8 @@ class Mesh:
                 self._mesh_count += 1
 
             r_val += self._r_spacing
+            if i == self._r_points - 2:
+                r_val = self._rmax
 
         self.logger.info('Total mesh points = {}, Grid Points = {}'.format(self._mesh_count, self._grid_count))
         self.logger.info('Core Boundary points = {}, Wall Boundary points = {}'.format(self._core_count, self._wall_count))
