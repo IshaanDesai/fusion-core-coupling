@@ -7,6 +7,7 @@ module list
 # adapt to eigen path
 export Eigen3_ROOT=$HOME/eigen-3.3.7
 
+cd $PRECICE_ROOT
 rm -rf build
 mkdir -p build && cd build
 cmake -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=$PWD/installed -DPRECICE_PETScMapping=OFF \
