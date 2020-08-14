@@ -8,8 +8,8 @@
     },
   "mesh_parameters": {
       "dimensions": 2,
-      "r_inner": 0.2,
-      "r_outer": 0.5,
+      "r_inner": 0.1,
+      "r_outer": 0.3501,
       "radial_points": 100,
       "circular_points": 200
   },
@@ -17,13 +17,13 @@
     "coeff_perp": 0.01
   },
   "simulation_parameters": {
-      "total_time": 0.1,
+      "total_time": 0.01,
       "timestep": 1.0E-4,
       "t_output": 0.001
   },
   "init_conditions": {
       "xb": 0.0,
-      "yb": 0.35,
+      "yb": 0.2,
       "wxb": 0.05,
       "wyb": 0.05
   }

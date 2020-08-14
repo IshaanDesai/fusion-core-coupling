@@ -40,13 +40,11 @@ class Diffusion:
         rmin, rmax = self._config.get_rmin(), self._config.get_rmax()
 
         # Define coupling mesh (current definition assumes polar participant is Inner (Core) of Tokamak)
-        vertices_x, vertices_y = [], []
+        vertices = []
         for i in range(mesh.get_n_points_wall()):
             wall_id = mesh.wall_to_mesh_index(i)
-            vertices_x.append(mesh.get_x(wall_id))
-            vertices_y.append(mesh.get_y(wall_id))
-
-        self._coupling_mesh_vertices = np.stack([vertices_x, vertices_y], axis=1)
+            vertices.append([mesh.get_x(wall_id), mesh.get_y(wall_id)])
+        self._coupling_mesh_vertices = np.array(vertices)
 
         # Set up mesh in preCICE
         self._vertex_ids = self._interface.set_mesh_vertices(self._interface.get_mesh_id(self._config.get_coupling_mesh_name()),
@@ -59,6 +57,9 @@ class Diffusion:
         # Field variable array
         u_np = np.zeros((nr, ntheta), dtype=np.double)
         cdef double [:, ::1] u = u_np
+        # Duplicate of field variable array for checkpointing
+        u_cp_np = np.zeros((nr, ntheta), dtype=np.double)
+        cdef double [:, ::1] u_cp = u_cp_np
         # Field delta change array
         du_perp_np = np.zeros((nr, ntheta), dtype=np.double)
         cdef double [:, ::1] du_perp = du_perp_np
@@ -78,9 +79,9 @@ class Diffusion:
 
         # Setup boundary conditions at inner and outer edge of the torus
         bndvals_wall = np.zeros((mesh.get_n_points_wall(), 2))
-        bnd_wall = Boundary(mesh, bndvals_wall, u, BoundaryType.NEUMANN_SO, MeshVertexType.BC_WALL)
+        bnd_wall = Boundary(self._config, mesh, bndvals_wall, u, BoundaryType.NEUMANN_SO, MeshVertexType.BC_WALL)
         bndvals_core = np.zeros(mesh.get_n_points_core())
-        bnd_core = Boundary(mesh, bndvals_core, u, BoundaryType.DIRICHLET, MeshVertexType.BC_CORE)
+        bnd_core = Boundary(self._config, mesh, bndvals_core, u, BoundaryType.DIRICHLET, MeshVertexType.BC_CORE)
 
         # Get parameters from config and mesh modules
         diffc_perp = self._config.get_diffusion_coeff()

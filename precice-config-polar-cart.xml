@@ -45,7 +45,7 @@
 
     <coupling-scheme:serial-implicit>
        <participants first="Core" second="Edge"/>
-       <max-time value="1.0"/>
+       <max-time value="0.01"/>
        <time-window-size value="0.0001"/>
        <max-iterations value="30"/>
        <exchange data="value" mesh="edge_cartesian" from="Core" to="Edge"/>
