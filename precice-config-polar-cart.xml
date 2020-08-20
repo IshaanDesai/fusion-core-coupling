@@ -2,8 +2,11 @@
 
 <precice-configuration>
 
-    <log enabled="true">
-        <sink filter="%Severity% > debug" format="---[precice] %ColorizedSeverity% %Message%" enabled="true"/>
+    <log>
+	<!--
+	<sink type="stream" output="stdout"  filter= "(%Severity% > debug) or (%Severity% >= trace and %Module% contains SolverInterfaceImpl)"  enabled="true" />
+	-->
+	<sink type="stream" output="stdout" filter="%Severity% > debug" enabled="true"/>
     </log>
   
   <solver-interface dimensions="2">
@@ -45,20 +48,25 @@
 
     <coupling-scheme:serial-implicit>
        <participants first="Core" second="Edge"/>
-       <max-time value="0.01"/>
-       <time-window-size value="0.0001"/>
+       <max-time value="0.5"/>
+       <time-window-size value="0.0002"/>
        <max-iterations value="30"/>
        <exchange data="value" mesh="edge_cartesian" from="Core" to="Edge"/>
        <exchange data="flux" mesh="edge_polar" from="Edge" to="Core"/>
-       <relative-convergence-measure data="value" mesh="edge_cartesian" limit="1e-5"/>
-       <relative-convergence-measure data="flux" mesh="edge_polar" limit="1e-5"/>
+       <relative-convergence-measure data="value" mesh="edge_cartesian" limit="1e-2" strict="true"/>
+       <relative-convergence-measure data="flux" mesh="edge_polar" limit="1e-2" strict="true"/>
+       <acceleration:constant>
+	 <relaxation value="0.5"/>
+       </acceleration:constant>
+       <!--
        <acceleration:IQN-ILS>
-    	 <data name="flux" mesh="edge_polar"/>
-         <initial-relaxation value="0.01"/>
-         <max-used-iterations value="50"/>
-         <time-windows-reused value="10"/>
+    	 <data name="value" mesh="edge_cartesian"/>
+         <initial-relaxation value="0.1"/>
+         <max-used-iterations value="30"/>
+         <time-windows-reused value="20"/>
          <filter type="QR2" limit="1e-2"/>
        </acceleration:IQN-ILS>
+       -->
     </coupling-scheme:serial-implicit>
     
   </solver-interface>

@@ -1,5 +1,5 @@
-rm *.log
-rm slurm*
-rm -r precice-run/
-rm output/* 
-rm logfile.log
+rm -fv *.log
+rm -fv slurm*
+rm -r -fv precice-run/
+rm -fv output/* 
+rm -fv logfile.log

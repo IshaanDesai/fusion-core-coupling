@@ -51,7 +51,8 @@ class Mesh:
         self._r_spacing = (self._rmax - self._rmin) / (self._r_points - 1)
         self._theta_spacing = 2*math.pi / self._theta_points
 
-        self.logger.info('r_spacing = {}, theta_spacing = {}'.format(self._r_spacing, self._theta_spacing))
+        # self.logger.info('r_spacing = {}, theta_spacing = {}'.format(self._r_spacing, self._theta_spacing))
+        print('r_spacing = {}, theta_spacing = {}'.format(self._r_spacing, self._theta_spacing))
 
         self._polar_coords_r = np.zeros((self._r_points, self._theta_points))
         self._polar_coords_theta = np.zeros((self._r_points, self._theta_points))
@@ -100,8 +101,10 @@ class Mesh:
             if i == self._r_points - 2:
                 r_val = self._rmax
 
-        self.logger.info('Total mesh points = {}, Grid Points = {}'.format(self._mesh_count, self._grid_count))
-        self.logger.info('Core Boundary points = {}, Wall Boundary points = {}'.format(self._core_count, self._wall_count))
+        # self.logger.info('Total mesh points = {}, Grid Points = {}'.format(self._mesh_count, self._grid_count))
+        # self.logger.info('Core Boundary points = {}, Wall Boundary points = {}'.format(self._core_count, self._wall_count))
+        print('Total mesh points = {}, Grid Points = {}'.format(self._mesh_count, self._grid_count))
+        print('Core Boundary points = {}, Wall Boundary points = {}'.format(self._core_count, self._wall_count))
 
         self._mesh_index_of_grid = np.array(mesh_index_grid)
         self._mesh_index_of_core = np.array(mesh_index_core)

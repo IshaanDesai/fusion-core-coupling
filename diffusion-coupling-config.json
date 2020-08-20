@@ -9,21 +9,21 @@
   "mesh_parameters": {
       "dimensions": 2,
       "r_inner": 0.1,
-      "r_outer": 0.3501,
-      "radial_points": 100,
-      "circular_points": 200
+      "r_outer": 0.2501,
+      "radial_points": 50,
+      "circular_points": 100
   },
   "diffusion_parameters": {
     "coeff_perp": 0.01
   },
   "simulation_parameters": {
-      "total_time": 0.01,
-      "timestep": 1.0E-4,
-      "t_output": 0.001
+      "total_time": 0.2,
+      "timestep": 2E-4,
+      "t_output": 0.02
   },
   "init_conditions": {
       "xb": 0.0,
-      "yb": 0.2,
+      "yb": 0.175,
       "wxb": 0.05,
       "wyb": 0.05
   }

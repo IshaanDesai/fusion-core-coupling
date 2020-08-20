@@ -18,7 +18,7 @@ from precice import action_write_initial_data, action_write_iteration_checkpoint
 
 class Diffusion:
     def __init__(self):
-        self.logger = logging.getLogger('main.diffusion_core.Diffusion')
+        # self.logger = logging.getLogger('main.diffusion_core.Diffusion')
 
         # Read initial conditions from a JSON config file
         self._config = Config('diffusion-coupling-config.json')
@@ -85,9 +85,11 @@ class Diffusion:
 
         # Get parameters from config and mesh modules
         diffc_perp = self._config.get_diffusion_coeff()
-        self.logger.info('Diffusion coefficient = %f', diffc_perp)
+        # self.logger.info('Diffusion coefficient = {}'.format(diffc_perp))
+        print('Diffusion coefficient = {}'.format(diffc_perp))
         cdef double dt = self._config.get_dt()
-        self.logger.info('dt = %f', dt)
+        # self.logger.info('dt = {}'.format(dt))
+        print('dt = {}'.format(dt))
         t_total, t_out = self._config.get_total_time(), self._config.get_t_output()
         cdef int n_t = int(t_total/dt)
         cdef int n_out = int(t_out/dt)
@@ -122,9 +124,11 @@ class Diffusion:
 
         # Check the CFL Condition for Diffusion Equation
         cfl_r = dt * diffc_perp / (dr * dr)
-        self.logger.info('CFL Coefficient with radial param = %f. Must be less than 0.5', cfl_r)
+        # self.logger.info('CFL Coefficient with radial param = {}. Must be less than 0.5'.format(cfl_r))
+        print('CFL Coefficient with radial param = {}. Must be less than 0.5'.format(cfl_r))
         cfl_theta = dt * diffc_perp / (np.mean(r_self) * np.mean(r_self) * dtheta * dtheta)
-        self.logger.info('CFL Coefficient with theta param = %f. Must be less than 0.5', cfl_theta)
+        # self.logger.info('CFL Coefficient with theta param = {}. Must be less than 0.5'.format(cfl_theta))
+        print('CFL Coefficient with theta param = {}. Must be less than 0.5'.format(cfl_theta))
         assert (cfl_r < 0.5)
         assert (cfl_theta < 0.5)
 
@@ -133,7 +137,8 @@ class Diffusion:
 
         # Write initial data
         write_vtk(u, mesh, 0)
-        self.logger.info('Initial state: VTK file output written at t = %f', 0)
+        # self.logger.info('Initial state: VTK file output written at t = {}'.format(0.0))
+        print('Initial state: VTK file output written at t = {}'.format(0.0))
 
         # Time loop
         cdef double u_sum, t_cp
@@ -149,7 +154,8 @@ class Diffusion:
 
             # Read coupling data
             flux_values = self._interface.read_block_vector_data(self._read_data_id, self._vertex_ids)
-            self.logger.info('Sum of flux values from read data = {}'.format(np.sum(flux_values)))
+            # self.logger.info('Sum of flux values from read data = {}'.format(np.sum(flux_values)))
+            # print('Sum of flux values from read data = {}'.format(np.sum(flux_values)))
             bnd_wall.set_bnd_vals(u, flux_values)
 
             # Update time step
@@ -186,13 +192,13 @@ class Diffusion:
 
             # Write data to coupling interface preCICE
             scalar_values = bnd_wall.get_bnd_vals(u)
-            self.logger.info('Sum of scalar values before writing data = {}'.format(np.sum(scalar_values)))
+            # self.logger.info('Sum of scalar values before writing data = {}'.format(np.sum(scalar_values)))
+            # print('Sum of scalar values before writing data = {}'.format(np.sum(scalar_values)))
             self._interface.write_block_scalar_data(self._write_data_id, self._vertex_ids, scalar_values)
 
             # Advance coupling via preCICE
             precice_dt = self._interface.advance(dt)
 
-            self.logger.info('After advancing coupling and before checkpoint check')
             if self._interface.is_action_required(precice.action_read_iteration_checkpoint()):  # roll back to checkpoint
                 u = u_cp
                 n = n_cp
@@ -204,15 +210,19 @@ class Diffusion:
 
                 if n%n_out == 0 or n == n_t-1:
                     write_vtk(u, mesh, n)
-                    self.logger.info('VTK file output written at t = %f', n*dt)
+                    # self.logger.info('VTK file output written at t = {}'.format(n*dt))
+                    print('VTK file output written at t = {}'.format(n*dt))
                     u_sum = 0
                     for i in range(nr):
                         for j in range(ntheta):
                             u_sum += u[i, j]
 
-                    self.logger.info('Elapsed time = %f  || Field sum = %f', n*dt, u_sum/(nr*ntheta))
-                    self.logger.info('Elapsed CPU time = %f', time.clock())
+                    # self.logger.info('Elapsed time = {}  || Field sum = {}'.format(n*dt, u_sum/(nr*ntheta)))
+                    # self.logger.info('Elapsed CPU time = {}'.format(time.clock()))
+                    print('Elapsed time = {}  || Field sum = {}'.format(n*dt, u_sum/(nr*ntheta)))
+                    print('Elapsed CPU time = {}'.format(time.clock()))
 
         self._interface.finalize()
-        self.logger.info('Total CPU time = %f', time.clock())
+        # self.logger.info('Total CPU time = {}'.format(time.clock()))
+        print('Total CPU time = {}'.format(time.clock()))
         # End
