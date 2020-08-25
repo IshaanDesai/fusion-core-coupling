@@ -46,6 +46,7 @@
 
     <m2n:sockets from="Core" to="Edge" network="ib0"/>
 
+      <!--
     <coupling-scheme:serial-implicit>
        <participants first="Core" second="Edge"/>
        <max-time value="0.5"/>
@@ -58,7 +59,6 @@
        <acceleration:constant>
 	 <relaxation value="0.5"/>
        </acceleration:constant>
-       <!--
        <acceleration:IQN-ILS>
     	 <data name="value" mesh="edge_cartesian"/>
          <initial-relaxation value="0.1"/>
@@ -66,8 +66,16 @@
          <time-windows-reused value="20"/>
          <filter type="QR2" limit="1e-2"/>
        </acceleration:IQN-ILS>
-       -->
     </coupling-scheme:serial-implicit>
-    
+    -->
+
+    <coupling-scheme:serial-explicit>
+       <participants first="Core" second="Edge"/>
+       <max-time value="1.0"/>
+       <time-window-size value="1e-4"/>
+       <exchange data="value" mesh="edge_cartesian" from="Core" to="Edge"/>
+       <exchange data="flux" mesh="edge_polar" from="Edge" to="Core"/>
+    </coupling-scheme:serial-explicit>
+
   </solver-interface>
 </precice-configuration>
