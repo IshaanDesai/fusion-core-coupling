@@ -43,7 +43,7 @@ class Diffusion:
         du_perp_np = np.zeros((nr, ntheta), dtype=np.double)
         cdef double [:, ::1] du_perp = du_perp_np
 
-        # Initializing custom initial state for MMS analysis
+        # Initializing custom initial state (sinosoidal)
         for l in range(mesh.get_n_points_grid()):
             mesh_ind = mesh.grid_to_mesh_index(l)
             radialp = mesh.get_r(mesh_ind)
@@ -53,8 +53,8 @@ class Diffusion:
             u[i, j] = mms.init_mms(radialp, thetap)
 
         # Initialize boundary conditions at inner and outer edge of the torus
-        bndvals_wall = np.zeros((mesh.get_n_points_wall(), 2))
-        bnd_wall = Boundary(config, mesh, bndvals_wall, u, BoundaryType.NEUMANN_SO, MeshVertexType.BC_WALL)
+        bndvals_wall = np.zeros((mesh.get_n_points_wall()))
+        bnd_wall = Boundary(config, mesh, bndvals_wall, u, BoundaryType.DIRICHLET, MeshVertexType.BC_WALL)
         bndvals_core = np.zeros((mesh.get_n_points_core()))
         bnd_core = Boundary(config, mesh, bndvals_core, u, BoundaryType.DIRICHLET, MeshVertexType.BC_CORE)
 
@@ -154,11 +154,8 @@ class Diffusion:
                     for j in range(0, ntheta):
                         u_sum += u[i, j]
 
-                self.logger.info('Elapsed time = %f  || Field sum = %f', n*dt, u_sum/(nr*ntheta))
-                self.logger.info('Elapsed CPU time = %f', time.clock())
-                # Output L2 error for MMS
-                l2_error, inf_error = mms.error_computation(mesh, u, n*dt)
-                self.logger.info('L2 error = {} | Inf error = {}'.format(l2_error, inf_error))
+                self.logger.info("Elapsed time = {}  || Field sum = {}".format(n*dt, u_sum/(nr*ntheta)))
+                self.logger.info("Elapsed CPU time = {}".format(time.clock()))
 
-        self.logger.info('Total CPU time = %f', time.clock())
+        self.logger.info("Total CPU time = {}".format(time.clock()))
         # End

@@ -5,10 +5,13 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=8000
-#SBATCH --time=03:59:00
+#SBATCH --time=24:00:00
 
 # Reloading correct modules for python polar code:
 module load anaconda/3/2019.03
+
+# Clean old results
+./Allclean
 
 # Run both coupling jobs
 echo "Launching Polar Diffusion Code"
