@@ -6,7 +6,7 @@ import numpy as np
 cimport numpy as np
 cimport cython
 from diffusion_core.modules.mesh_2d import Mesh, MeshVertexType
-from diffusion_core.modules.output import write_vtk
+from diffusion_core.modules.output import write_vtk, write_csv
 from diffusion_core.modules.config import Config
 from diffusion_core.modules.boundary import Boundary, BoundaryType
 from diffusion_core.modules.mms cimport MMS
@@ -147,6 +147,7 @@ class Diffusion:
             bnd_core.set_bnd_vals_mms(u, n*dt)
 
             if n%n_out==0 or n==n_t-1:
+                write_csv(u, mesh, n)
                 write_vtk(u, mesh, n)
                 self.logger.info('VTK file output written at t = %f', n*dt)
                 u_sum = 0
