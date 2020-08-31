@@ -38,10 +38,9 @@ def write_vtk(field, mesh, t):
 def write_csv(field, mesh, n):
     nr, ntheta = mesh.get_n_points_axiswise()
     counter = 0
-    with open('./output/polar_'+str(n)+'.csv', mode='w') as file:
+    with open('/draco/u/idesai/fusioncoupling-polar/output/polar_'+str(n)+'.csv', mode='w') as file:
         file_writer = csv.writer(file, delimiter=',')
         for i in range(nr):
             for j in range(ntheta):
                 file_writer.writerow([mesh.get_x(counter), mesh.get_y(counter), field[i, j]])
                 counter += 1
-

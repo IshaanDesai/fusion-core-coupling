@@ -78,6 +78,9 @@ class Diffusion:
         #    i, j = mesh.get_i_j_from_index(mesh_ind)
         #    u[i, j] = gaussx * gaussy
 
+        # Create MMS module object
+        mms = MMS(self._config, mesh)
+
         # Initializing custom initial state (sinosoidal)
         for l in range(mesh.get_n_points_grid()):
             mesh_ind = mesh.grid_to_mesh_index(l)
@@ -220,6 +223,7 @@ class Diffusion:
 
                 if n%n_out == 0 or n == n_t-1:
                     write_vtk(u, mesh, n)
+                    write_csv(u, mesh, n)
                     # self.logger.info('VTK file output written at t = {}'.format(n*dt))
                     print('VTK file output written at t = {}'.format(n*dt))
                     u_sum = 0

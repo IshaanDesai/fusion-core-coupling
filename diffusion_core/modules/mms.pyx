@@ -34,7 +34,10 @@ cdef class MMS:
         :param theta:
         :return:
         """
-        return math.sin(2*math.pi*(r - self.rmin)/(self.rmax - self.rmin))*math.cos(theta)
+        # Using overall coupling domain boundaries to calculate initial state
+        r_inner = 0.2
+        r_outer = 0.5
+        return math.sin(2*math.pi*(r - r_inner)/(r_outer - r_inner))*math.cos(theta)
 
     def source_term(self, r, theta, t):
         """
