@@ -140,7 +140,7 @@ class Diffusion:
             # Update scheme
             for i in range(1, nr - 1):
                 for j in range(ntheta):
-                    u[i, j] += dt*diffc_perp*du_perp[i, j] + dt*mms.source_term(r_self[i, j], theta_self[i, j], n*dt)
+                    u[i, j] += dt*diffc_perp*du_perp[i, j]
 
             # Set Neumann boundary conditions in each iteration
             bnd_wall.set_bnd_vals_mms(u, n*dt)

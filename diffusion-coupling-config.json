@@ -10,16 +10,16 @@
       "dimensions": 2,
       "r_inner": 0.2,
       "r_outer": 0.5,
-      "radial_points": 400,
-      "circular_points": 800
+      "radial_points": 50,
+      "circular_points": 100
   },
   "diffusion_parameters": {
     "coeff_perp": 0.01
   },
   "simulation_parameters": {
       "total_time": 1.0,
-      "timestep": 1.5625E-5,
-      "t_output": 0.1
+      "timestep": 1E-3,
+      "t_output": 0.5
   },
   "init_conditions": {
       "xb": 0.0,
