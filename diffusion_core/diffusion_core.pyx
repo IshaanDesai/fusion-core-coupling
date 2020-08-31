@@ -6,10 +6,11 @@ import numpy as np
 cimport numpy as np
 cimport cython
 from diffusion_core.modules.mesh_2d import Mesh, MeshVertexType
-from diffusion_core.modules.output import write_vtk
+from diffusion_core.modules.output import write_vtk, write_csv
 from diffusion_core.modules.config import Config
 from diffusion_core.modules.boundary import Boundary, BoundaryType
 from diffusion_core.modules.initialization import gaussian_blob
+from diffusion_core.modules.mms cimport MMS
 import math
 import time
 import logging
@@ -65,17 +66,26 @@ class Diffusion:
         cdef double [:, ::1] du_perp = du_perp_np
 
         # Initializing Gaussian blob as initial condition of field
-        x_center, y_center = self._config.get_xb_yb()
-        x_width, y_width = self._config.get_wxb_wyb()
+        #x_center, y_center = self._config.get_xb_yb()
+        #x_width, y_width = self._config.get_wxb_wyb()
+        #for l in range(mesh.get_n_points_grid()):
+        #    mesh_ind = mesh.grid_to_mesh_index(l)
+        #    x = mesh.get_x(mesh_ind)
+        #    y = mesh.get_y(mesh_ind)
+        #    gaussx = gaussian_blob(x_center, x_width, x)
+        #    gaussy = gaussian_blob(y_center, y_width, y)
+
+        #    i, j = mesh.get_i_j_from_index(mesh_ind)
+        #    u[i, j] = gaussx * gaussy
+
+        # Initializing custom initial state (sinosoidal)
         for l in range(mesh.get_n_points_grid()):
             mesh_ind = mesh.grid_to_mesh_index(l)
-            x = mesh.get_x(mesh_ind)
-            y = mesh.get_y(mesh_ind)
-            gaussx = gaussian_blob(x_center, x_width, x)
-            gaussy = gaussian_blob(y_center, y_width, y)
+            radialp = mesh.get_r(mesh_ind)
+            thetap = mesh.get_theta(mesh_ind)
 
             i, j = mesh.get_i_j_from_index(mesh_ind)
-            u[i, j] = gaussx * gaussy
+            u[i, j] = mms.init_mms(radialp, thetap)
 
         # Setup boundary conditions at inner and outer edge of the torus
         bndvals_wall = np.zeros((mesh.get_n_points_wall(), 2))

@@ -3,12 +3,15 @@ diffusion_core/*.c
 diffusion_core/*.so
 .idea/
 build/
-diffusion_core/modules/*.so
+diffusion_core/modules/*.cpython-36m-x86_64-linux-gnu.so
+diffusion_core/diffusion_core.cpython-37m-x86_64-linux-gnu.so
 diffusion_core/modules/*.c
+diffusion_core/modules/mms.cpython-37m-x86_64-linux-gnu.so
 *.out
 *.log
 diffusion_core.egg-info/
 dist/
 diffusion_core/__pycache__/*
 diffusion_core/modules/__pycache__/*
-diffusion_core/diffusion_core.cpython-37m-x86_64-linux-gnu.so
+diffusion_core.egg-info/
+dist/

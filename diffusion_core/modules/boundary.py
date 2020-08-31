@@ -88,6 +88,44 @@ class Boundary:
                 field[inds[0], inds[1]] = (4/3)*field[inds[0]-1, inds[1]] - (1/3)*field[inds[0]-2, inds[1]] + (2/3)*self._dr*flux
                 counter += 1
 
+    def set_bnd_vals_mms(self, field, t):
+        """
+        gradient(f)_{r} = (2*pi/(rmax - rmin))*cos(2*pi*(r - rmin)/(rmax - rmin))*cos(t)*cos(theta)
+        """
+        counter = 0
+        if self._bnd_type == BoundaryType.DIRICHLET:
+            for inds in self._bnd_inds:
+                # Zero value selected for Dirichlet boundary condition for MMS analysis
+                field[inds[0], inds[1]] = 0.0
+                counter += 1
+        elif self._bnd_type == BoundaryType.NEUMANN_SO:
+            for inds in self._bnd_inds:
+                # Modify boundary value by evaluation of gradient of ansatz
+                a = 2 * math.pi * (self._r[counter] - self._rmin) / (self._rmax - self._rmin)
+                b = 2 * math.pi / (self._rmax - self._rmin)
+                # NOTE: This implementation is only valid for Wall boundary cells (outer most cells)
+                flux = b * math.cos(a) * math.cos(t) * math.cos(self._theta[counter])
+                # Modify boundary value by second order evaluation of gradient
+                field[inds[0], inds[1]] = (4/3)*field[inds[0]-1, inds[1]] - (1/3)*field[inds[0]-2, inds[1]] + (2/3)*self._dr*flux
+                counter += 1
+        elif self._bnd_type == BoundaryType.NEUMANN_FO:
+            counter = 0
+            for inds in self._bnd_inds:
+                # Calculate flux from components
+                flux = field[counter, 0]*(self._x[counter]/self._r[counter]) + field[counter, 1]*(self._y[counter]/self._r[counter])
+                # Modify boundary value by first order evaluation of gradient
+                field[inds[0], inds[1]] = field[inds[0]-1, inds[1]] + flux*self._dr
+                counter += 1
+        elif self._bnd_type == BoundaryType.NEUMANN_SO:
+            counter = 0
+            for inds in self._bnd_inds:
+                # Calculate flux from components
+                flux = field[counter, 0]*(self._x[counter]/self._r[counter]) + field[counter, 1]*(self._y[counter]/self._r[counter])
+                # Modify boundary value by second order evaluation of gradient
+                # NOTE: This implementation is only valid for Wall boundary cells (outer most cells)
+                field[inds[0], inds[1]] = (4/3)*field[inds[0]-1, inds[1]] - (1/3)*field[inds[0]-2, inds[1]] + (2/3)*self._dr*flux
+                counter += 1
+
     def get_bnd_vals(self, field):
         bnd_data = []
         # Gets Dirichlet values and returns them for coupling
@@ -95,4 +133,3 @@ class Boundary:
             bnd_data.append(field[inds[0], inds[1]])
 
         return np.array(bnd_data)
-

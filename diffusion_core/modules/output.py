@@ -6,6 +6,7 @@ For the VTK export the following package is used: https://github.com/paulo-herre
 from pyevtk.hl import gridToVTK
 import numpy as np
 from .mesh_2d import MeshVertexType
+import csv
 
 
 def write_vtk(field, mesh, t):
@@ -33,4 +34,14 @@ def write_vtk(field, mesh, t):
 
     gridToVTK("/draco/u/idesai/fusioncoupling-polar/output/"+filename, x_out, y_out, z_out, pointData={"field": field_out, "type": point_type})
 
+
+def write_csv(field, mesh, n):
+    nr, ntheta = mesh.get_n_points_axiswise()
+    counter = 0
+    with open('./output/polar_'+str(n)+'.csv', mode='w') as file:
+        file_writer = csv.writer(file, delimiter=',')
+        for i in range(nr):
+            for j in range(ntheta):
+                file_writer.writerow([mesh.get_x(counter), mesh.get_y(counter), field[i, j]])
+                counter += 1
 
