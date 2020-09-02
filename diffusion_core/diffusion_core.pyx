@@ -81,12 +81,11 @@ class Diffusion:
         # Create MMS module object
         mms = MMS(self._config, mesh)
 
-        # Initializing custom initial state (sinosoidal)
-        for l in range(mesh.get_n_points_grid()):
+        # Initializing custom initial state (sinosoidal) for ALL points
+        for l in range(mesh.get_n_points_mesh()):
             mesh_ind = mesh.grid_to_mesh_index(l)
             radialp = mesh.get_r(mesh_ind)
             thetap = mesh.get_theta(mesh_ind)
-
             i, j = mesh.get_i_j_from_index(mesh_ind)
             u[i, j] = mms.init_mms(radialp, thetap)
 

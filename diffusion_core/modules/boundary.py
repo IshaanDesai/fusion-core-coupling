@@ -90,6 +90,7 @@ class Boundary:
 
     def set_bnd_vals_mms(self, field, t):
         """
+        f = sin(2*pi*(r - rmin)/(rmax - rmin))*cos(theta)
         gradient(f)_{r} = (2*pi/(rmax - rmin))*cos(2*pi*(r - rmin)/(rmax - rmin))*cos(t)*cos(theta)
         """
         counter = 0
