@@ -203,6 +203,9 @@ class Diffusion:
                 for j in range(ntheta):
                     u[i, j] += dt*diffc_perp*du_perp[i, j]
 
+            # Reset boundary values based on updated field
+            bnd_wall.set_bnd_vals(u, flux_values)
+
             # Write data to coupling interface preCICE
             scalar_values = bnd_wall.get_bnd_vals(u)
             # self.logger.info('Sum of scalar values before writing data = {}'.format(np.sum(scalar_values)))
