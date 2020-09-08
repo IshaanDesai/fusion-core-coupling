@@ -83,10 +83,9 @@ class Diffusion:
 
         # Initializing custom initial state (sinosoidal) for ALL points
         for l in range(mesh.get_n_points_mesh()):
-            mesh_ind = mesh.grid_to_mesh_index(l)
-            radialp = mesh.get_r(mesh_ind)
-            thetap = mesh.get_theta(mesh_ind)
-            i, j = mesh.get_i_j_from_index(mesh_ind)
+            radialp = mesh.get_r(l)
+            thetap = mesh.get_theta(l)
+            i, j = mesh.get_i_j_from_index(l)
             u[i, j] = mms.init_mms(radialp, thetap)
 
         # Setup boundary conditions at inner and outer edge of the torus
@@ -152,6 +151,14 @@ class Diffusion:
         # self.logger.info('Initial state: VTK file output written at t = {}'.format(0.0))
         print('Initial state: VTK file output written at t = {}'.format(0.0))
 
+        # Initialize to non-zero coupling values
+        if self._interface.is_action_required(precice.action_write_initial_data()):
+            # Write data to coupling interface preCICE
+            scalar_values = bnd_wall.get_bnd_vals(u)
+            self._interface.write_block_scalar_data(self._write_data_id, self._vertex_ids, scalar_values)
+
+        self._interface.initialize_data()
+
         # Time loop
         cdef double u_sum, t_cp
         cdef int n_cp
@@ -207,8 +214,6 @@ class Diffusion:
 
             # Write data to coupling interface preCICE
             scalar_values = bnd_wall.get_bnd_vals(u)
-            # self.logger.info('Sum of scalar values before writing data = {}'.format(np.sum(scalar_values)))
-            # print('Sum of scalar values before writing data = {}'.format(np.sum(scalar_values)))
             self._interface.write_block_scalar_data(self._write_data_id, self._vertex_ids, scalar_values)
 
             # Advance coupling via preCICE
