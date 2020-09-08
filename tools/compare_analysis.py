@@ -5,7 +5,6 @@ import numpy as np
 from scipy.interpolate import griddata
 import csv
 import matplotlib.pyplot as plt
-import math
 
 
 def read_data(res_str, code_name, n_t):
