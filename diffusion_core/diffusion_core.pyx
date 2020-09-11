@@ -15,7 +15,7 @@ import math
 import time
 import logging
 import precice
-from precice import action_write_initial_data, action_write_iteration_checkpoint, action_read_iteration_checkpoint
+from precice import action_write_initial_data
 
 class Diffusion:
     def __init__(self):
@@ -58,9 +58,6 @@ class Diffusion:
         # Field variable array
         u_np = np.zeros((nr, ntheta), dtype=np.double)
         cdef double [:, ::1] u = u_np
-        # Duplicate of field variable array for checkpointing
-        u_cp_np = np.zeros((nr, ntheta), dtype=np.double)
-        cdef double [:, ::1] u_cp = u_cp_np
         # Field delta change array
         du_perp_np = np.zeros((nr, ntheta), dtype=np.double)
         cdef double [:, ::1] du_perp = du_perp_np
@@ -160,17 +157,9 @@ class Diffusion:
         self._interface.initialize_data()
 
         # Time loop
-        cdef double u_sum, t_cp
-        cdef int n_cp
         cdef int n = 0
         cdef double t = 0.0
         while self._interface.is_coupling_ongoing():
-            if self._interface.is_action_required(precice.action_write_iteration_checkpoint()):  # write checkpoint
-                u_cp = u
-                n_cp = n
-                t_cp = t
-                self._interface.mark_action_fulfilled(precice.action_write_iteration_checkpoint())
-
             # Read coupling data
             flux_values = self._interface.read_block_vector_data(self._read_data_id, self._vertex_ids)
             # self.logger.info('Sum of flux values from read data = {}'.format(np.sum(flux_values)))
@@ -219,29 +208,24 @@ class Diffusion:
             # Advance coupling via preCICE
             precice_dt = self._interface.advance(dt)
 
-            if self._interface.is_action_required(precice.action_read_iteration_checkpoint()):  # roll back to checkpoint
-                u = u_cp
-                n = n_cp
-                t = t_cp
-                self._interface.mark_action_fulfilled(precice.action_read_iteration_checkpoint())
-            else:  # update solution
-                n += 1
-                t += dt
+            # update solution
+            n += 1
+            t += dt
 
-                if n%n_out == 0 or n == n_t-1:
-                    write_vtk(u, mesh, n)
-                    write_csv(u, mesh, n)
-                    # self.logger.info('VTK file output written at t = {}'.format(n*dt))
-                    print('VTK file output written at t = {}'.format(n*dt))
-                    u_sum = 0
-                    for i in range(nr):
-                        for j in range(ntheta):
-                            u_sum += u[i, j]
+            if n%n_out == 0 or n == n_t-1:
+                write_vtk(u, mesh, n)
+                write_csv(u, mesh, n)
+                # self.logger.info('VTK file output written at t = {}'.format(n*dt))
+                print('VTK file output written at t = {}'.format(n*dt))
+                u_sum = 0
+                for i in range(nr):
+                    for j in range(ntheta):
+                        u_sum += u[i, j]
 
-                    # self.logger.info('Elapsed time = {}  || Field sum = {}'.format(n*dt, u_sum/(nr*ntheta)))
-                    # self.logger.info('Elapsed CPU time = {}'.format(time.clock()))
-                    print('Elapsed time = {}  || Field sum = {}'.format(n*dt, u_sum/(nr*ntheta)))
-                    print('Elapsed CPU time = {}'.format(time.clock()))
+                # self.logger.info('Elapsed time = {}  || Field sum = {}'.format(n*dt, u_sum/(nr*ntheta)))
+                # self.logger.info('Elapsed CPU time = {}'.format(time.clock()))
+                print('Elapsed time = {}  || Field sum = {}'.format(n*dt, u_sum/(nr*ntheta)))
+                print('Elapsed CPU time = {}'.format(time.clock()))
 
         self._interface.finalize()
         # self.logger.info('Total CPU time = {}'.format(time.clock()))

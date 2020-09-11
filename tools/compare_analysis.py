@@ -21,12 +21,21 @@ def read_data(res_str, code_name, n_t):
 
 
 def write_data(res_str, code_name, points, data):
-    filename = './output_' + res_str + '/' + code_name + '_new.csv'
+    filename = './output_' + res_str + '/' + code_name + '.csv'
     n_v = data.shape[0]
     with open(filename, 'w') as file:
         writer = csv.writer(file, delimiter=',')
         for i in range(n_v):
             writer.writerow([points[i, 0], points[i, 1], data[i]])
+    print("Writing to file {} successful".format(filename))
+
+
+def write_data_from_dict(res_str, code_name, data):
+    filename = './output_' + res_str + '/' + code_name + '.csv'
+    with open(filename, 'w') as file:
+        writer = csv.writer(file, delimiter=',')
+        for point, value in data.items():
+            writer.writerow([point[0], point[1], value])
     print("Writing to file {} successful".format(filename))
 
 
@@ -42,9 +51,6 @@ def compare_monolithic(mesh_res, tstamp, ref_points, ref_data):
     print("---------- Monolithic ----------")
     print("Mesh resolution ({}): Polar result has {} point, PARALLAX result has {} point".format(mesh_res, core_f.size,
                                                                                                  edge_f.size))
-
-    # write_data(str(mesh_res), 'edge', edge_pts, interp_edge_f)
-    # write_data(str(mesh_res), 'core', core_pts, interp_core_f)
 
     error_edge, ref_sum = 0, 0
     for i in range(edge_f.size):
@@ -90,26 +96,44 @@ def compare_coupled(mesh_res, tstamp, ref_points, ref_data):
     edge_ref_f = {tuple(key): value for key, value in zip(edge_pts, interp_edge_f)}
     core_ref_f = {tuple(key): value for key, value in zip(core_pts, interp_core_f)}
 
-    error_edge, ref_sum = 0, 0
+    coupled_pts = np.concatenate((edge_pts, core_pts), axis=0)
+    coupled_vals = np.concatenate((edge_f, core_f), axis=0)
+    diff_val = {tuple(key): value for key, value in zip(coupled_pts, coupled_vals)}
+
+    error_coupling, ref_sum = 0, 0
+    # Calculate point wise error for Edge participant
     for point in edge_ref_f.keys():
         if edge_ref_f[point] != 0:
-            error_edge += (edge_coupling_f[point] - edge_ref_f[point]) ** 2
+            error_coupling += (edge_coupling_f[point] - edge_ref_f[point]) ** 2
             ref_sum += edge_ref_f[point] ** 2
+            diff_val[point] = (edge_coupling_f[point] - edge_ref_f[point])
 
-    error_edge = pow(error_edge / ref_sum, 0.5)
-    print("Error between reference and edge case with mesh res ({}) = {}".format(res, error_edge))
+    error_edge = error_coupling
+    ref_edge = ref_sum
+    error_edge = pow(error_edge / ref_edge, 0.5)
+    print("Error between reference and Edge participant with mesh res ({}) = {}".format(res, error_edge))
 
-    error_core, ref_sum = 0, 0
+    error_core, ref_core = 0, 0
     for point in core_ref_f.keys():
+        # Calculate point wise error for Core participant
         if core_ref_f[point] != 0:
-            error_core += (core_coupling_f[point] - core_ref_f[point]) ** 2
+            error_coupling += (core_coupling_f[point] - core_ref_f[point]) ** 2
             ref_sum += core_ref_f[point] ** 2
+            error_core += (core_coupling_f[point] - core_ref_f[point]) ** 2
+            ref_core += core_ref_f[point] ** 2
 
-    error_core = pow(error_core / ref_sum, 0.5)
-    print("Error between reference and core case with mesh res ({}) = {}".format(res, error_core))
+            diff_val[point] = (core_coupling_f[point] - core_ref_f[point])
+
+    error_core = pow(error_core / ref_core, 0.5)
+    print("Error between reference and Core participant with mesh res ({}) = {}".format(res, error_core))
+
+    error_coupling = pow(error_coupling / ref_sum, 0.5)
+    print("Error between reference and coupled case with mesh res ({}) = {}".format(res, error_coupling))
     print("--------------------")
 
-    return error_edge, error_core
+    write_data_from_dict(str(mesh_res), 'diff_val', diff_val)
+
+    return error_coupling
 
 
 # Finest resolution for Polar code considered as reference result
@@ -125,8 +149,7 @@ err_coupling = np.zeros(mesh_res)
 for res in range(mesh_res):
     print("Comparing mesh resolution number: {}".format(res))
     err_edge[res], err_core[res] = compare_monolithic(res, res, ref_points, ref_field)
-    err_coupling_1, err_coupling_2 = compare_coupled('coupling_'+str(res), res, ref_points, ref_field)
-    err_coupling[res] = err_coupling_1 + err_coupling_2
+    err_coupling[res] = compare_coupled('coupling_'+str(res), res, ref_points, ref_field)
 
 # Plotting
 plt.xscale('log')
