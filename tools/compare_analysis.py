@@ -7,9 +7,8 @@ import csv
 import matplotlib.pyplot as plt
 
 
-def read_data(res_str, code_name, n_t):
+def read_data(filename):
     points, field = [], []
-    filename = './output_' + res_str + '/' + code_name + '_' + str(n_t) + '.csv'
     with open(filename, 'r') as file:
         reader = csv.reader(file, delimiter=',')
         for row in reader:
@@ -20,8 +19,7 @@ def read_data(res_str, code_name, n_t):
     return np.array(points), np.array(field)
 
 
-def write_data(res_str, code_name, points, data):
-    filename = './output_' + res_str + '/' + code_name + '.csv'
+def write_data(filename, points, data):
     n_v = data.shape[0]
     with open(filename, 'w') as file:
         writer = csv.writer(file, delimiter=',')
@@ -30,8 +28,7 @@ def write_data(res_str, code_name, points, data):
     print("Writing to file {} successful".format(filename))
 
 
-def write_data_from_dict(res_str, code_name, data):
-    filename = './output_' + res_str + '/' + code_name + '.csv'
+def write_data_from_dict(filename, data):
     with open(filename, 'w') as file:
         writer = csv.writer(file, delimiter=',')
         for point, value in data.items():
@@ -39,11 +36,14 @@ def write_data_from_dict(res_str, code_name, data):
     print("Writing to file {} successful".format(filename))
 
 
-def compare_monolithic(mesh_res, tstamp, ref_points, ref_data):
-    edge_pts, edge_f = read_data(str(mesh_res), 'parallax', tstamp)
-    core_pts, core_f = read_data(str(mesh_res), 'polar', tstamp)
-    interp_edge_f = griddata(ref_points, ref_data, edge_pts, method='cubic', fill_value=0.0)
-    interp_core_f = griddata(ref_points, ref_data, core_pts, method='cubic', fill_value=0.0)
+def compare_monolithic(res_num, ref_coords, ref_data):
+    # Read data of current mesh resolution
+    edge_pts, edge_f = read_data('./output_' + str(res_num) + '/parallax_' + str(res_num) + '.csv')
+    core_pts, core_f = read_data('./output_' + str(res_num) + '/polar_' + str(res_num) + '.csv')
+
+    # Interpolate fine resolution reference data to current resolution points
+    interp_edge_f = griddata(ref_coords, ref_data, edge_pts, method='cubic', fill_value=0.0)
+    interp_core_f = griddata(ref_coords, ref_data, core_pts, method='cubic', fill_value=0.0)
 
     assert interp_edge_f.shape == edge_f.shape
     assert interp_core_f.shape == core_f.shape
@@ -71,16 +71,19 @@ def compare_monolithic(mesh_res, tstamp, ref_points, ref_data):
 
     error_core = pow(error_core / ref_sum, 0.5)
     print("Error between reference and core case with mesh res ({}) = {}".format(res, error_core))
-    print("--------------------")
+    print("--------------------------------")
 
     return error_edge, error_core
 
 
-def compare_coupled(mesh_res, tstamp, ref_points, ref_data):
-    edge_pts, edge_f = read_data(str(mesh_res), 'parallax', tstamp)
-    core_pts, core_f = read_data(str(mesh_res), 'polar', tstamp)
-    interp_edge_f = griddata(ref_points, ref_data, edge_pts, method='cubic', fill_value=0.0)
-    interp_core_f = griddata(ref_points, ref_data, core_pts, method='cubic', fill_value=0.0)
+def compare_coupled(res_num, ref_coords, ref_data):
+    # Read data of current mesh resolution
+    edge_pts, edge_f = read_data('./output_coupling_' + str(res_num) + '/parallax_' + str(res_num) + '.csv')
+    core_pts, core_f = read_data('./output_coupling_' + str(res_num) + '/polar_' + str(res_num) + '.csv')
+
+    # Interpolate fine resolution reference data to current resolution points
+    interp_edge_f = griddata(ref_coords, ref_data, edge_pts, method='cubic', fill_value=0.0)
+    interp_core_f = griddata(ref_coords, ref_data, core_pts, method='cubic', fill_value=0.0)
 
     assert interp_edge_f.shape == edge_f.shape
     assert interp_core_f.shape == core_f.shape
@@ -98,18 +101,25 @@ def compare_coupled(mesh_res, tstamp, ref_points, ref_data):
 
     coupled_pts = np.concatenate((edge_pts, core_pts), axis=0)
     coupled_vals = np.concatenate((edge_f, core_f), axis=0)
+
     diff_val = {tuple(key): value for key, value in zip(coupled_pts, coupled_vals)}
+    # Set all values of diff_val = 0
+    for point in diff_val.keys():
+        diff_val[point] = 0
 
     error_coupling, ref_sum = 0, 0
+    error_edge, ref_edge = 0, 0
     # Calculate point wise error for Edge participant
     for point in edge_ref_f.keys():
         if edge_ref_f[point] != 0:
             error_coupling += (edge_coupling_f[point] - edge_ref_f[point]) ** 2
             ref_sum += edge_ref_f[point] ** 2
-            diff_val[point] = (edge_coupling_f[point] - edge_ref_f[point])
 
-    error_edge = error_coupling
-    ref_edge = ref_sum
+            error_edge += (edge_coupling_f[point] - edge_ref_f[point]) ** 2
+            ref_edge += edge_ref_f[point] ** 2
+
+            diff_val[point] = edge_coupling_f[point] - edge_ref_f[point]
+
     error_edge = pow(error_edge / ref_edge, 0.5)
     print("Error between reference and Edge participant with mesh res ({}) = {}".format(res, error_edge))
 
@@ -119,25 +129,26 @@ def compare_coupled(mesh_res, tstamp, ref_points, ref_data):
         if core_ref_f[point] != 0:
             error_coupling += (core_coupling_f[point] - core_ref_f[point]) ** 2
             ref_sum += core_ref_f[point] ** 2
+
             error_core += (core_coupling_f[point] - core_ref_f[point]) ** 2
             ref_core += core_ref_f[point] ** 2
 
-            diff_val[point] = (core_coupling_f[point] - core_ref_f[point])
+            diff_val[point] = core_coupling_f[point] - core_ref_f[point]
 
     error_core = pow(error_core / ref_core, 0.5)
     print("Error between reference and Core participant with mesh res ({}) = {}".format(res, error_core))
 
     error_coupling = pow(error_coupling / ref_sum, 0.5)
     print("Error between reference and coupled case with mesh res ({}) = {}".format(res, error_coupling))
-    print("--------------------")
+    print("------------------------------")
 
-    write_data_from_dict(str(mesh_res), 'diff_val', diff_val)
+    write_data_from_dict('./output_coupling_' + str(res_num) + '/diff_val.csv', diff_val)
 
     return error_coupling
 
 
 # Finest resolution for Polar code considered as reference result
-ref_points, ref_field = read_data('ref', 'polar', 64101)
+ref_points, ref_field = read_data('./output_ref/polar_' + str(64101) + '.csv')
 print("Reference result has {} points".format(ref_field.size))
 
 # For each mesh resolution, fit data by interpolation and calculate error by L2 norm
@@ -148,8 +159,8 @@ err_core = np.zeros(mesh_res)
 err_coupling = np.zeros(mesh_res)
 for res in range(mesh_res):
     print("Comparing mesh resolution number: {}".format(res))
-    err_edge[res], err_core[res] = compare_monolithic(res, res, ref_points, ref_field)
-    err_coupling[res] = compare_coupled('coupling_'+str(res), res, ref_points, ref_field)
+    err_edge[res], err_core[res] = compare_monolithic(res, ref_points, ref_field)
+    err_coupling[res] = compare_coupled(res, ref_points, ref_field)
 
 # Plotting
 plt.xscale('log')
@@ -178,4 +189,3 @@ plt.plot(mesh_resolutions, O2_err_coupling, 'b-.', label="O(2) Coupling", linewi
 
 plt.legend(loc='best')
 plt.show()
-

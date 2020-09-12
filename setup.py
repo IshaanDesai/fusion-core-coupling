@@ -16,7 +16,7 @@ setup(
     name='diffusion_core',
     version='0.1',
     ext_modules=cythonize(find_pyx(), language_level=3),
-    install_requires=['Cython'],
+    install_requires=['Cython', 'scipy', 'numpy', 'matplotlib'],
     include_dirs=[numpy.get_include()],
     packages=find_packages()
 )

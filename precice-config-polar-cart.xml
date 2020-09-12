@@ -72,7 +72,7 @@
     <coupling-scheme:serial-explicit>
        <participants first="Core" second="Edge"/>
        <max-time value="1.0"/>
-       <time-window-size value="4e-5"/>
+       <time-window-size value="1.6e-4"/>
        <exchange data="value" mesh="edge_cartesian" from="Core" to="Edge"/>
        <exchange data="flux" mesh="edge_polar" from="Edge" to="Core"/>
     </coupling-scheme:serial-explicit>
