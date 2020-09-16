@@ -3,9 +3,6 @@
 <precice-configuration>
 
     <log>
-	<!--
-	<sink type="stream" output="stdout"  filter= "(%Severity% > debug) or (%Severity% >= trace and %Module% contains SolverInterfaceImpl)"  enabled="true" />
-	-->
 	<sink type="stream" output="stdout" filter="%Severity% > debug" enabled="true"/>
     </log>
   
@@ -14,8 +11,11 @@
     <data:scalar name="value"/>
     <data:vector name="flux"/>
 
-    <mesh name="core_mesh">
+    <mesh name="core_read_mesh">
        <use-data name="flux"/>
+    </mesh>
+
+    <mesh name="core_write_mesh">
        <use-data name="value"/>
     </mesh>
 
@@ -28,13 +28,14 @@
     </mesh>
     
     <participant name="Core">
-      <use-mesh name="core_mesh" provide="yes"/>
+      <use-mesh name="core_read_mesh" provide="yes"/>
+      <use-mesh name="core_write_mesh" provide="yes"/>
       <use-mesh name="edge_cartesian" from="Edge"/>
       <use-mesh name="edge_polar" from="Edge"/>
-      <write-data name="value" mesh="core_mesh"/>
-      <read-data name="flux" mesh="core_mesh"/>
-      <mapping:rbf-thin-plate-splines direction="write" from="core_mesh" to="edge_cartesian" constraint="consistent"/>
-      <mapping:nearest-neighbor direction="read" from="edge_polar" to="core_mesh" constraint="consistent"/>
+      <write-data name="value" mesh="core_write_mesh"/>
+      <read-data name="flux" mesh="core_read_mesh"/>
+      <mapping:rbf-thin-plate-splines direction="write" from="core_write_mesh" to="edge_cartesian" constraint="consistent"/>
+      <mapping:nearest-neighbor direction="read" from="edge_polar" to="core_read_mesh" constraint="consistent"/>
     </participant>
     
     <participant name="Edge">		
@@ -71,8 +72,8 @@
 
     <coupling-scheme:serial-explicit>
        <participants first="Core" second="Edge"/>
-       <max-time value="1.0"/>
-       <time-window-size value="1.6e-4"/>
+       <max-time value="0.25"/>
+       <time-window-size value="6.4e-4"/>
        <exchange data="value" mesh="edge_cartesian" from="Core" to="Edge"/>
        <exchange data="flux" mesh="edge_polar" from="Edge" to="Core"/>
     </coupling-scheme:serial-explicit>

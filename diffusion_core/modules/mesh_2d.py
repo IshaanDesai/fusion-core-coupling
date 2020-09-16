@@ -12,8 +12,9 @@ class MeshVertexType(enum.Enum):
     Defines vertex types: Physical vertex (CORE), and boundary vertex (GHOST).
     """
     GRID = 0  # physical grid point
-    BC_WALL = 1  # ghost grid point on outer edge
-    BC_CORE = 2  # ghost grid point on inner edge
+    BC_WALL = 1  # grid point on outer edge
+    BC_CORE = 2  # grid point on inner edge
+    CUSTOM = 3  # point at a user specified custom radius (or within on radial spacing of that)
 
 
 class Mesh:
@@ -29,6 +30,7 @@ class Mesh:
         self._dims = config.get_dims()
         self._rmin = config.get_rmin()
         self._rmax = config.get_rmax()
+        self._custom_r = config.get_rcustom()
         self._r_points = config.get_r_points()
         self._theta_points = config.get_theta_points()
 
@@ -41,9 +43,10 @@ class Mesh:
         self._mesh_index = None  # Initialized in create_mesh function
         self._mesh_index_of_grid = None  # Initialized in create_mesh function
         self._mesh_index_of_ghost = None  # Initialized in create_mesh function
+        self._mesh_index_of_custom = None  # Initialized in create_mesh function
         self._mesh_i, self._mesh_j = None, None  # Initialized in create_mesh function
 
-        self._mesh_count, self._grid_count, self._core_count, self._wall_count = 0, 0, 0, 0
+        self._mesh_count, self._grid_count, self._core_count, self._wall_count, self._custom_count = 0, 0, 0, 0, 0
 
         self._create_mesh()
 
@@ -64,7 +67,10 @@ class Mesh:
         # https://stackoverflow.com/questions/6667201/how-to-define-a-two-dimensional-array-in-python
         self._vertex_type = [[0 for x in range(self._theta_points)] for y in range(self._r_points)]
 
-        mesh_index_grid, mesh_index_core, mesh_index_wall = [], [], []
+        # Define a custom range to allocate points for a custom boundary
+        custom_ind = int((self._custom_r - self._rmin) / self._r_spacing)
+
+        mesh_index_grid, mesh_index_core, mesh_index_wall, mesh_index_custom = [], [], [], []
 
         r_val = self._rmin
         for i in range(self._r_points):
@@ -93,6 +99,11 @@ class Mesh:
                 self._mesh_i[self._mesh_count] = i
                 self._mesh_j[self._mesh_count] = j
 
+                if i == custom_ind:
+                    self._vertex_type[i][j] = MeshVertexType.CUSTOM
+                    mesh_index_custom.append(self._mesh_count)
+                    self._custom_count += 1
+
                 theta_val += self._theta_spacing
                 self._mesh_count += 1
 
@@ -102,10 +113,12 @@ class Mesh:
 
         self.logger.info('Total mesh points = {}, Grid Points = {}'.format(self._mesh_count, self._grid_count))
         self.logger.info('Core Boundary points = {}, Wall Boundary points = {}'.format(self._core_count, self._wall_count))
+        self.logger.info('Custom boundary defined at r = {} has points = {}'.format(self._custom_r, self._custom_count))
 
         self._mesh_index_of_grid = np.array(mesh_index_grid)
         self._mesh_index_of_core = np.array(mesh_index_core)
         self._mesh_index_of_wall = np.array(mesh_index_wall)
+        self._mesh_index_of_custom = np.array(mesh_index_custom)
 
     def get_i_j_from_index(self, index):
         return self._mesh_i[index], self._mesh_j[index]
@@ -138,6 +151,9 @@ class Mesh:
     def wall_to_mesh_index(self, index):
         return self._mesh_index_of_wall[index]
 
+    def custom_to_mesh_index(self, index):
+        return self._mesh_index_of_custom[index]
+
     def get_n_points_mesh(self):
         return self._mesh_count
 
@@ -149,6 +165,9 @@ class Mesh:
 
     def get_n_points_wall(self):
         return self._wall_count
+
+    def get_n_points_custom(self):
+        return self._custom_count
 
     def get_n_points_axiswise(self):
         return self._r_points, self._theta_points

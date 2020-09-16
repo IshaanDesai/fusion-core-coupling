@@ -2,24 +2,26 @@
   "participant_name": "Core",
   "config_file_name": "precice-config-polar-cart.xml",
   "interface": {
-      "coupling_mesh_name": "core_mesh",
+      "coupling_read_mesh_name": "core_read_mesh",
+      "coupling_write_mesh_name": "core_write_mesh",
       "write_data_name": "value",
       "read_data_name": "flux"
-    },
+  },
   "mesh_parameters": {
       "dimensions": 2,
       "r_inner": 0.2,
       "r_outer": 0.4,
-      "radial_points": 133,
-      "circular_points": 400
+      "r_custom": 0.388,
+      "radial_points": 33,
+      "circular_points": 100
   },
   "diffusion_parameters": {
     "coeff_perp": 0.01
   },
   "simulation_parameters": {
-      "total_time": 1.0,
-      "timestep": 6.25E-5,
-      "t_output": 0.5
+      "total_time": 0.25,
+      "timestep": 1E-3,
+      "t_output": 0.125
   },
   "init_conditions": {
       "xb": 0.0,

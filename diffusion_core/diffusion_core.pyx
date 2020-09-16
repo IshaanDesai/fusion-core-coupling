@@ -28,7 +28,8 @@ class Diffusion:
         self._interface = precice.Interface(self._config.get_participant_name(), self._config.get_config_file_name(), 0, 1)
 
         # Coupling mesh
-        self._coupling_mesh_vertices = None
+        self._coupling_read_mesh_vertices = None
+        self._coupling_write_mesh_vertices = None
         self._vertex_ids = None
 
     def solve_diffusion(self):
@@ -40,20 +41,33 @@ class Diffusion:
         nr, ntheta = self._config.get_r_points(), self._config.get_theta_points()
         rmin, rmax = self._config.get_rmin(), self._config.get_rmax()
 
-        # Define coupling mesh (current definition assumes polar participant is Inner (Core) of Tokamak)
+        # Define coupling mesh as reading mesh for fluxes
+        vertices = []
+        for i in range(mesh.get_n_points_custom()):
+            custom_id = mesh.custom_to_mesh_index(i)
+            vertices.append([mesh.get_x(custom_id), mesh.get_y(custom_id)])
+        self._coupling_read_mesh_vertices = np.array(vertices)
+
+        # Define coupling mesh as a writing mesh for values
         vertices = []
         for i in range(mesh.get_n_points_wall()):
             wall_id = mesh.wall_to_mesh_index(i)
             vertices.append([mesh.get_x(wall_id), mesh.get_y(wall_id)])
-        self._coupling_mesh_vertices = np.array(vertices)
+        self._coupling_write_mesh_vertices = np.array(vertices)
 
-        # Set up mesh in preCICE
-        self._vertex_ids = self._interface.set_mesh_vertices(self._interface.get_mesh_id(self._config.get_coupling_mesh_name()),
-            self._coupling_mesh_vertices)
+        # Set up read mesh in preCICE
+        self._read_vertex_ids = self._interface.set_mesh_vertices(self._interface.get_mesh_id(
+            self._config.get_coupling_read_mesh_name()), self._coupling_read_mesh_vertices)
+        self._write_vertex_ids = self._interface.set_mesh_vertices(self._interface.get_mesh_id(
+            self._config.get_coupling_write_mesh_name()), self._coupling_write_mesh_vertices)
 
-        self._mesh_id = self._interface.get_mesh_id(self._config.get_coupling_mesh_name())
-        self._read_data_id = self._interface.get_data_id(self._config.get_read_data_name(), self._mesh_id)
-        self._write_data_id = self._interface.get_data_id(self._config.get_write_data_name(), self._mesh_id)
+        # Set up write mesh in preCICE
+        self._write_mesh_id = self._interface.get_mesh_id(self._config.get_coupling_write_mesh_name())
+        self._write_data_id = self._interface.get_data_id(self._config.get_write_data_name(), self._write_mesh_id)
+
+        # Set up read mesh in preCICE
+        self._read_mesh_id = self._interface.get_mesh_id(self._config.get_coupling_read_mesh_name())
+        self._read_data_id = self._interface.get_data_id(self._config.get_read_data_name(), self._read_mesh_id)
 
         # Field variable array
         u_np = np.zeros((nr, ntheta), dtype=np.double)
@@ -161,7 +175,7 @@ class Diffusion:
         cdef double t = 0.0
         while self._interface.is_coupling_ongoing():
             # Read coupling data
-            flux_values = self._interface.read_block_vector_data(self._read_data_id, self._vertex_ids)
+            flux_values = self._interface.read_block_vector_data(self._read_data_id, self._read_vertex_ids)
             # self.logger.info('Sum of flux values from read data = {}'.format(np.sum(flux_values)))
             # print('Sum of flux values from read data = {}'.format(np.sum(flux_values)))
             bnd_wall.set_bnd_vals(u, flux_values)
@@ -203,7 +217,7 @@ class Diffusion:
 
             # Write data to coupling interface preCICE
             scalar_values = bnd_wall.get_bnd_vals(u)
-            self._interface.write_block_scalar_data(self._write_data_id, self._vertex_ids, scalar_values)
+            self._interface.write_block_scalar_data(self._write_data_id, self._write_vertex_ids, scalar_values)
 
             # Advance coupling via preCICE
             precice_dt = self._interface.advance(dt)
