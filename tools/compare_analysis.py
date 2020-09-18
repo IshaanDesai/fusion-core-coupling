@@ -263,7 +263,7 @@ err_core = np.zeros(mesh_res)
 err_coupling = np.zeros(mesh_res)
 for res in range(mesh_res):
     print("Comparing mesh resolution number: {}".format(res))
-#    err_edge[res], err_core[res] = compare_monolithic(res, ref_points, ref_field)
+    err_edge[res], err_core[res] = compare_monolithic(res, ref_points, ref_field)
     err_coupling[res] = compare_coupled(res, ref_points, ref_field)
 
 plt.xscale('log')
@@ -273,19 +273,19 @@ plt.ylabel('l2 error')
 plt.title('Varying overlap 2*dx in Edge participant (0.012, 0.006, 0.003)')
 
 mesh_resolutions = [50, 100, 200]
-# # Plot monolithic PARALLAX comparison
-# plt.plot(mesh_resolutions, err_edge, 'rs', label="Edge monolithic", linewidth=2)
-# O1_err_edge = [err_edge[0], err_edge[0]/2, err_edge[0]/4]
-# plt.plot(mesh_resolutions, O1_err_edge, 'r--', label="O(1) Edge", linewidth=1)
-# O2_err_edge = [err_edge[0], err_edge[0]/4, err_edge[0]/16]
-# plt.plot(mesh_resolutions, O2_err_edge, 'r-.', label="O(2) Edge", linewidth=1)
-#
-# # Plot monolithic Polar code comparison
-# plt.plot(mesh_resolutions, err_core, 'gs', label="Core monolithic", linewidth=2)
-# O1_err_core = [err_core[0], err_core[0]/2, err_core[0]/4]
-# plt.plot(mesh_resolutions, O1_err_core, 'g--', label="O(1) Core", linewidth=1)
-# O2_err_core = [err_core[0], err_core[0]/4, err_core[0]/16]
-# plt.plot(mesh_resolutions, O2_err_core, 'g-.', label="O(2) Core", linewidth=1)
+# Plot monolithic PARALLAX comparison
+plt.plot(mesh_resolutions, err_edge, 'rs', label="Edge monolithic", linewidth=2)
+O1_err_edge = [err_edge[0], err_edge[0]/2, err_edge[0]/4]
+plt.plot(mesh_resolutions, O1_err_edge, 'r--', label="O(1) Edge", linewidth=1)
+O2_err_edge = [err_edge[0], err_edge[0]/4, err_edge[0]/16]
+plt.plot(mesh_resolutions, O2_err_edge, 'r-.', label="O(2) Edge", linewidth=1)
+
+# Plot monolithic Polar code comparison
+plt.plot(mesh_resolutions, err_core, 'gs', label="Core monolithic", linewidth=2)
+O1_err_core = [err_core[0], err_core[0]/2, err_core[0]/4]
+plt.plot(mesh_resolutions, O1_err_core, 'g--', label="O(1) Core", linewidth=1)
+O2_err_core = [err_core[0], err_core[0]/4, err_core[0]/16]
+plt.plot(mesh_resolutions, O2_err_core, 'g-.', label="O(2) Core", linewidth=1)
 
 # Plot PARALLAX - Polar coupled solution comparison
 plt.plot(mesh_resolutions, err_coupling, 'bs', label="Coupling", linewidth=2)

@@ -43,16 +43,16 @@ class Diffusion:
 
         # Define coupling mesh as reading mesh for fluxes
         vertices = []
-        for i in range(mesh.get_n_points_custom()):
-            custom_id = mesh.custom_to_mesh_index(i)
-            vertices.append([mesh.get_x(custom_id), mesh.get_y(custom_id)])
+        for i in range(mesh.get_n_points_wall()):
+            wall_id = mesh.wall_to_mesh_index(i)
+            vertices.append([mesh.get_x(wall_id), mesh.get_y(wall_id)])
         self._coupling_read_mesh_vertices = np.array(vertices)
 
         # Define coupling mesh as a writing mesh for values
         vertices = []
-        for i in range(mesh.get_n_points_wall()):
-            wall_id = mesh.wall_to_mesh_index(i)
-            vertices.append([mesh.get_x(wall_id), mesh.get_y(wall_id)])
+        for i in range(mesh.get_n_points_custom()):
+            custom_id = mesh.custom_to_mesh_index(i)
+            vertices.append([mesh.get_x(custom_id), mesh.get_y(custom_id)])
         self._coupling_write_mesh_vertices = np.array(vertices)
 
         # Set up read mesh in preCICE
