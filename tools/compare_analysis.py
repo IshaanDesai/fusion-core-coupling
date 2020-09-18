@@ -147,118 +147,112 @@ def compare_coupled(res_num, ref_coords, ref_data):
     return error_coupling
 
 
-# def plot_cross_section(res_num, rmin_core, rmax_core, rmin_edge, rmax_edge):
-#     core_x, edge_x = [], []
-#     core_pts, edge_pts = 667, 333
-#     dr_core = (rmax_core - rmin_core) / core_pts
-#     dr_edge = (rmax_edge - rmin_edge) / edge_pts
-#     dr = dr_core + dr_edge / 2
-#
-#     for i in range(core_pts):
-#         core_x.append([rmin_core + dr_core*i, 0.0])
-#
-#     for i in range(edge_pts):
-#         edge_x.append([rmin_edge + dr_edge*i, 0.0])
-#
-#     core_x = np.array(core_x)
-#     edge_x = np.array(edge_x)
-#
-#     # Read data of current mesh resolution
-#     core_coords, core_f = read_data('./output_coupling_' + str(res_num) + '/polar_' + str(res_num) + '.csv')
-#     edge_coords, edge_f = read_data('./output_coupling_' + str(res_num) + '/parallax_' + str(res_num) + '.csv')
-#
-#     # Interpolate fine resolution reference data to current resolution points
-#     line_core_f = griddata(core_coords, core_f, core_x, method='cubic', fill_value=0.0)
-#     line_edge_f = griddata(edge_coords, edge_f, edge_x, method='cubic', fill_value=0.0)
-#
-#     # Gradient for Core and Edge
-#     gradient_core = np.zeros(core_pts)
-#     gradient_edge = np.zeros(edge_pts)
-#     for i in range(core_pts-1):
-#         gradient_core[i] = (line_core_f[i+1] - line_core_f[i])/dr_core
-#
-#     for i in range(edge_pts-1):
-#         gradient_edge[i] = (line_edge_f[i+1] - line_edge_f[i])/dr_edge
-#
-#     # Join core and edge data
-#     coupled_pts = np.concatenate((core_x[:, 0], edge_x[:, 0]), axis=0)
-#     coupled_vals = np.concatenate((line_core_f, line_edge_f), axis=0)
-#
-#     gradient_vals = np.zeros(core_pts + edge_pts - 1)
-#     for i in range(0, core_pts+edge_pts-1):
-#         gradient_vals[i] = (coupled_vals[i+1] - coupled_vals[i]) / dr
-#
-#     return core_x[:, 0], edge_x[:, 0], line_core_f, line_edge_f, gradient_core, gradient_edge
+def plot_cross_section(res_num, rmin, rmax_edge, rmin_core, rmax):
+    core_x, edge_x = [], []
+    core_pts, edge_pts = 667, 333
+    dr_core = (rmax_edge - rmin) / core_pts
+    dr_edge = (rmax - rmin_core) / edge_pts
+    dr = dr_core + dr_edge / 2
+
+    for i in range(core_pts):
+        core_x.append([rmin + dr_core*i, 0.0])
+
+    for i in range(edge_pts):
+        edge_x.append([rmin_core + dr_edge*i, 0.0])
+
+    core_x = np.array(core_x)
+    edge_x = np.array(edge_x)
+
+    # Read data of current mesh resolution
+    core_coords, core_f = read_data('./output_coupling_' + str(res_num) + '/polar_' + str(res_num) + '.csv')
+    edge_coords, edge_f = read_data('./output_coupling_' + str(res_num) + '/parallax_' + str(res_num) + '.csv')
+
+    # Interpolate fine resolution reference data to current resolution points
+    line_core_f = griddata(core_coords, core_f, core_x, method='cubic', fill_value=0.0)
+    line_edge_f = griddata(edge_coords, edge_f, edge_x, method='cubic', fill_value=0.0)
+
+    # Gradient for Core and Edge
+    gradient_core = np.zeros(core_pts-1)
+    for i in range(core_pts-1):
+        gradient_core[i] = (line_core_f[i+1] - line_core_f[i])/dr_core
+
+    gradient_edge = np.zeros(edge_pts-1)
+    for i in range(edge_pts-1):
+        gradient_edge[i] = (line_edge_f[i+1] - line_edge_f[i])/dr_edge
+
+    # Join core and edge data
+    coupled_pts = np.concatenate((core_x[:, 0], edge_x[:, 0]), axis=0)
+    coupled_vals = np.concatenate((line_core_f, line_edge_f), axis=0)
+
+    gradient_vals = np.zeros(core_pts + edge_pts - 1)
+    for i in range(0, core_pts+edge_pts-1):
+        gradient_vals[i] = (coupled_vals[i+1] - coupled_vals[i]) / dr
+
+    return core_x[:, 0], edge_x[:, 0], line_core_f, line_edge_f, gradient_core, gradient_edge
 
 
 # For each mesh resolution, fit data by interpolation and calculate error by L2 norm
 mesh_res = 3
 
-# rmin_core, rmax_core = 0.2, 0.4
-# rmin_edge = [0.388, 0.394, 0.397]
-# rmax_edge = 0.5
-#
-# # plot
-# plt.xlabel('x coordinate')
-# plt.ylabel('field value')
-# plt.title('Line plots for various mesh resolutions')
-#
-# corev_plot, edgev_plot, core_flux_plot, edge_flux_plot = [], [], [], []
-# core_pts, edge_pts = None, None
-#
-# for res in range(mesh_res):
-#     print("Getting line plot for mesh resolution number: {}".format(res))
-#     core_pts, edge_pts, core_vals, edge_vals, core_flux_vals, edge_flux_vals = plot_cross_section(res, rmin_core,
-#                                                                                                   rmax_core,
-#                                                                                                   rmin_edge[res],
-#                                                                                                   rmax_edge)
-#     corev_plot.append(core_vals)
-#     edgev_plot.append(edge_vals)
-#     core_flux_plot.append(core_flux_vals)
-#     edge_flux_plot.append(edge_flux_vals)
-#
-# plt.plot(core_pts, corev_plot[0], 'b', label="Core Mesh Res 0")
-# plt.plot(edge_pts, edgev_plot[0], 'r', label="Edge Mesh Res 0")
-# plt.legend(loc='best')
-# plt.show()
-#
-# plt.plot(core_pts, corev_plot[1], 'b', label="Core Mesh Res 1")
-# plt.plot(edge_pts, edgev_plot[1], 'r', label="Edge Mesh Res 1")
-# plt.legend(loc='best')
-# plt.show()
-#
-# plt.plot(core_pts, corev_plot[2], 'b', label="Core Mesh Res 2")
-# plt.plot(edge_pts, edgev_plot[2], 'r', label="Edge Mesh Res 2")
-# plt.legend(loc='best')
-# plt.show()
-#
-# # Remove last x coordinate as gradient by forward difference is not computed at this point
-# core_plot_pts = np.zeros(999)
-# for i in range(core_pts.size):
-#     core_plot_pts[i] = core_pts[i]
-#
-# edge_plot_pts = np.zeros(999)
-# for i in range(edge_pts.size):
-#     edge_plot_pts[i] = edge_pts[i]
-#
-# plt.xlabel('x coordinate')
-# plt.ylabel('flux')
-# plt.title('Flux along line plots for various mesh resolutions')
-#
-# plt.plot(core_plot_pts, core_flux_plot[0], 'b', label="Core Mesh Res 0")
-# plt.plot(edge_plot_pts, edge_flux_plot[0], 'r', label="Edge Mesh Res 0")
-# plt.legend(loc='best')
-# plt.show()
-#
-# plt.plot(core_plot_pts, core_flux_plot[1], 'b', label="Core Mesh Res 1")
-# plt.plot(edge_plot_pts, edge_flux_plot[1], 'r', label="Edge Mesh Res 1")
-# plt.legend(loc='best')
-# plt.show()
-#
-# plt.plot(core_plot_pts, core_flux_plot[2], 'b', label="Core Mesh Res 2")
-# plt.plot(edge_plot_pts, edge_flux_plot[2], 'r', label="Edge Mesh Res 2")
-# plt.legend(loc='best')
-# plt.show()
+rmin_core = 0.2
+rmax_core = 0.4
+rmin_edge = [0.388, 0.394, 0.397]
+rmax_edge = 0.5
+
+# plot
+plt.xlabel('x coordinate')
+plt.ylabel('field value')
+plt.title('Line plots for various mesh resolutions')
+
+corepts_plot, edgepts_plot = [], []
+corev_plot, edgev_plot, core_flux_plot, edge_flux_plot = [], [], [], []
+core_pts, edge_pts = None, None
+
+for res in range(mesh_res):
+    print("Getting line plot for mesh resolution number: {}".format(res))
+    core_pts, edge_pts, corev, edgev, core_flux, edge_flux = plot_cross_section(res, rmin_core, rmax_core, rmin_edge[res],
+                                                                                rmax_edge)
+    corepts_plot.append(core_pts)
+    edgepts_plot.append(edge_pts)
+    corev_plot.append(corev)
+    edgev_plot.append(edgev)
+    core_flux_plot.append(core_flux)
+    edge_flux_plot.append(edge_flux)
+
+plt.plot(corepts_plot[0], corev_plot[0], 'bo', label="Core Mesh Res 0")
+plt.plot(edgepts_plot[0], edgev_plot[0], 'ro', label="Edge Mesh Res 0")
+
+plt.plot(corepts_plot[1], corev_plot[1], 'b--', label="Core Mesh Res 1")
+plt.plot(edgepts_plot[1], edgev_plot[1], 'r--', label="Edge Mesh Res 1")
+
+plt.plot(corepts_plot[2], corev_plot[2], 'b-*', label="Core Mesh Res 2")
+plt.plot(edgepts_plot[2], edgev_plot[2], 'r-*', label="Edge Mesh Res 2")
+plt.legend(loc='best')
+plt.show()
+
+# Remove last x coordinate as gradient by forward difference is not computed at this point
+core_plot_pts = np.zeros(666)
+for i in range(core_plot_pts.size):
+    core_plot_pts[i] = core_pts[i]
+
+edge_plot_pts = np.zeros(332)
+for i in range(edge_plot_pts.size):
+    edge_plot_pts[i] = edge_pts[i]
+
+plt.xlabel('x coordinate')
+plt.ylabel('flux')
+plt.title('Flux along line plots for various mesh resolutions')
+
+plt.plot(core_plot_pts, core_flux_plot[0], 'bo', label="Core Mesh Res 0")
+plt.plot(edge_plot_pts, edge_flux_plot[0], 'ro', label="Edge Mesh Res 0")
+
+plt.plot(core_plot_pts, core_flux_plot[1], 'b--', label="Core Mesh Res 1")
+plt.plot(edge_plot_pts, edge_flux_plot[1], 'r--', label="Edge Mesh Res 1")
+
+plt.plot(core_plot_pts, core_flux_plot[2], 'b-*', label="Core Mesh Res 2")
+plt.plot(edge_plot_pts, edge_flux_plot[2], 'r-*', label="Edge Mesh Res 2")
+plt.legend(loc='best')
+plt.show()
 
 # Finest resolution for Polar code considered as reference result
 ref_points, ref_field = read_data('./output_ref/polar_ref.csv')
@@ -269,7 +263,7 @@ err_core = np.zeros(mesh_res)
 err_coupling = np.zeros(mesh_res)
 for res in range(mesh_res):
     print("Comparing mesh resolution number: {}".format(res))
-    err_edge[res], err_core[res] = compare_monolithic(res, ref_points, ref_field)
+#    err_edge[res], err_core[res] = compare_monolithic(res, ref_points, ref_field)
     err_coupling[res] = compare_coupled(res, ref_points, ref_field)
 
 plt.xscale('log')
@@ -279,19 +273,19 @@ plt.ylabel('l2 error')
 plt.title('Varying overlap 2*dx in Edge participant (0.012, 0.006, 0.003)')
 
 mesh_resolutions = [50, 100, 200]
-# Plot monolithic PARALLAX comparison
-plt.plot(mesh_resolutions, err_edge, 'rs', label="Edge monolithic", linewidth=2)
-O1_err_edge = [err_edge[0], err_edge[0]/2, err_edge[0]/4]
-plt.plot(mesh_resolutions, O1_err_edge, 'r--', label="O(1) Edge", linewidth=1)
-O2_err_edge = [err_edge[0], err_edge[0]/4, err_edge[0]/16]
-plt.plot(mesh_resolutions, O2_err_edge, 'r-.', label="O(2) Edge", linewidth=1)
-
-# Plot monolithic Polar code comparison
-plt.plot(mesh_resolutions, err_core, 'gs', label="Core monolithic", linewidth=2)
-O1_err_core = [err_core[0], err_core[0]/2, err_core[0]/4]
-plt.plot(mesh_resolutions, O1_err_core, 'g--', label="O(1) Core", linewidth=1)
-O2_err_core = [err_core[0], err_core[0]/4, err_core[0]/16]
-plt.plot(mesh_resolutions, O2_err_core, 'g-.', label="O(2) Core", linewidth=1)
+# # Plot monolithic PARALLAX comparison
+# plt.plot(mesh_resolutions, err_edge, 'rs', label="Edge monolithic", linewidth=2)
+# O1_err_edge = [err_edge[0], err_edge[0]/2, err_edge[0]/4]
+# plt.plot(mesh_resolutions, O1_err_edge, 'r--', label="O(1) Edge", linewidth=1)
+# O2_err_edge = [err_edge[0], err_edge[0]/4, err_edge[0]/16]
+# plt.plot(mesh_resolutions, O2_err_edge, 'r-.', label="O(2) Edge", linewidth=1)
+#
+# # Plot monolithic Polar code comparison
+# plt.plot(mesh_resolutions, err_core, 'gs', label="Core monolithic", linewidth=2)
+# O1_err_core = [err_core[0], err_core[0]/2, err_core[0]/4]
+# plt.plot(mesh_resolutions, O1_err_core, 'g--', label="O(1) Core", linewidth=1)
+# O2_err_core = [err_core[0], err_core[0]/4, err_core[0]/16]
+# plt.plot(mesh_resolutions, O2_err_core, 'g-.', label="O(2) Core", linewidth=1)
 
 # Plot PARALLAX - Polar coupled solution comparison
 plt.plot(mesh_resolutions, err_coupling, 'bs', label="Coupling", linewidth=2)
