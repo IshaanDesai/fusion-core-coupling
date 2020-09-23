@@ -185,11 +185,34 @@ def plot_cross_section(res_num, rmin, rmax_edge, rmin_core, rmax):
     coupled_vals = np.concatenate((line_core_f, line_edge_f), axis=0)
 
     gradient_vals = np.zeros(core_pts + edge_pts - 1)
-    for i in range(0, core_pts+edge_pts-1):
+    for i in range(core_pts+edge_pts-1):
         gradient_vals[i] = (coupled_vals[i+1] - coupled_vals[i]) / dr
 
     return core_x[:, 0], edge_x[:, 0], line_core_f, line_edge_f, gradient_core, gradient_edge
 
+
+def plot_ref_cross_section(ref_f, ref_pts):
+    line_x = []
+    n_points = 1000
+    dr = (0.5 - 0.2) / n_points
+
+    for i in range(n_points):
+        line_x.append([0.2 + dr * i, 0.0])
+
+    line_pts = np.array(line_x)
+
+    line_ref_f = griddata(ref_pts, ref_f, line_pts, method='cubic', fill_value=0.0)
+
+    gradient_vals = np.zeros(n_points - 1)
+    for i in range(n_points - 1):
+        gradient_vals[i] = (line_ref_f[i+1] - line_ref_f[i]) / dr
+
+    return line_pts[:, 0], line_ref_f, gradient_vals
+
+
+# Finest resolution for Polar code considered as reference result
+ref_points, ref_field = read_data('./output_ref/polar_ref.csv')
+print("Reference result has {} points".format(ref_field.size))
 
 # For each mesh resolution, fit data by interpolation and calculate error by L2 norm
 mesh_res = 3
@@ -219,6 +242,11 @@ for res in range(mesh_res):
     core_flux_plot.append(core_flux)
     edge_flux_plot.append(edge_flux)
 
+refpts_plot, refv_plot, ref_flux_plot = plot_ref_cross_section(ref_field, ref_points)
+plt.plot()
+
+plt.plot(refpts_plot, refv_plot, 'k-', label="Reference Result", linewidth=1.5)
+
 plt.plot(corepts_plot[0], corev_plot[0], 'bo', label="Core Mesh Res 0")
 plt.plot(edgepts_plot[0], edgev_plot[0], 'ro', label="Edge Mesh Res 0")
 
@@ -231,32 +259,40 @@ plt.legend(loc='best')
 plt.show()
 
 # Remove last x coordinate as gradient by forward difference is not computed at this point
-core_plot_pts = np.zeros(666)
-for i in range(core_plot_pts.size):
-    core_plot_pts[i] = core_pts[i]
+core_flux_pts = []
+edge_flux_pts = []
+for res in range(mesh_res):
+    corepts = []
+    for i in range(666):
+        corepts.append(corepts_plot[res][i])
+    core_flux_pts.append(corepts)
 
-edge_plot_pts = np.zeros(332)
-for i in range(edge_plot_pts.size):
-    edge_plot_pts[i] = edge_pts[i]
+    edgepts = []
+    for i in range(332):
+        edgepts.append(edgepts_plot[res][i])
+    edge_flux_pts.append(edgepts)
+
+ref_flux_pts = []
+for i in range(999):
+    ref_flux_pts.append(refpts_plot[i])
 
 plt.xlabel('x coordinate')
 plt.ylabel('flux')
 plt.title('Flux along line plots for various mesh resolutions')
 
-plt.plot(core_plot_pts, core_flux_plot[0], 'bo', label="Core Mesh Res 0")
-plt.plot(edge_plot_pts, edge_flux_plot[0], 'ro', label="Edge Mesh Res 0")
+plt.plot(ref_flux_pts, ref_flux_plot, 'k-', label="Reference Result", linewidth=1.5)
 
-plt.plot(core_plot_pts, core_flux_plot[1], 'b--', label="Core Mesh Res 1")
-plt.plot(edge_plot_pts, edge_flux_plot[1], 'r--', label="Edge Mesh Res 1")
+plt.plot(core_flux_pts[0], core_flux_plot[0], 'bo', label="Core Mesh Res 0")
+plt.plot(edge_flux_pts[0], edge_flux_plot[0], 'ro', label="Edge Mesh Res 0")
 
-plt.plot(core_plot_pts, core_flux_plot[2], 'b-*', label="Core Mesh Res 2")
-plt.plot(edge_plot_pts, edge_flux_plot[2], 'r-*', label="Edge Mesh Res 2")
+plt.plot(core_flux_pts[1], core_flux_plot[1], 'b--', label="Core Mesh Res 1")
+plt.plot(edge_flux_pts[1], edge_flux_plot[1], 'r--', label="Edge Mesh Res 1")
+
+plt.plot(core_flux_pts[2], core_flux_plot[2], 'b-*', label="Core Mesh Res 2")
+plt.plot(edge_flux_pts[2], edge_flux_plot[2], 'r-*', label="Edge Mesh Res 2")
 plt.legend(loc='best')
 plt.show()
 
-# Finest resolution for Polar code considered as reference result
-ref_points, ref_field = read_data('./output_ref/polar_ref.csv')
-print("Reference result has {} points".format(ref_field.size))
 
 err_edge = np.zeros(mesh_res)
 err_core = np.zeros(mesh_res)
