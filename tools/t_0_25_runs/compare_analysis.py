@@ -49,7 +49,7 @@ def compare_monolithic(res_num, ref_coords, ref_data):
     assert interp_core_f.shape == core_f.shape
 
     print("---------- Monolithic ----------")
-    print("Mesh resolution ({}): Polar result has {} point, PARALLAX result has {} point".format(mesh_res, core_f.size,
+    print("Mesh resolution ({}): Polar result has {} point, PARALLAX result has {} point".format(res_num, core_f.size,
                                                                                                  edge_f.size))
 
     error_edge, ref_sum = 0, 0
