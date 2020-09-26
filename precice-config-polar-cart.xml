@@ -34,7 +34,7 @@
       <use-mesh name="edge_polar" from="Edge"/>
       <write-data name="value" mesh="core_write_mesh"/>
       <read-data name="flux" mesh="core_read_mesh"/>
-      <mapping:rbf-thin-plate-splines direction="write" from="core_write_mesh" to="edge_cartesian" constraint="consistent"/>
+      <mapping:rbf-compact-tps-c2 direction="write" from="core_write_mesh" to="edge_cartesian" constraint="consistent" support-radius="0.0306"/>
       <mapping:nearest-neighbor direction="read" from="edge_polar" to="core_read_mesh" constraint="consistent"/>
     </participant>
     
@@ -47,33 +47,10 @@
 
     <m2n:sockets from="Core" to="Edge" network="ib0"/>
 
-      <!--
-    <coupling-scheme:serial-implicit>
-       <participants first="Core" second="Edge"/>
-       <max-time value="0.5"/>
-       <time-window-size value="0.0002"/>
-       <max-iterations value="30"/>
-       <exchange data="value" mesh="edge_cartesian" from="Core" to="Edge"/>
-       <exchange data="flux" mesh="edge_polar" from="Edge" to="Core"/>
-       <relative-convergence-measure data="value" mesh="edge_cartesian" limit="1e-2" strict="true"/>
-       <relative-convergence-measure data="flux" mesh="edge_polar" limit="1e-2" strict="true"/>
-       <acceleration:constant>
-	 <relaxation value="0.5"/>
-       </acceleration:constant>
-       <acceleration:IQN-ILS>
-    	 <data name="value" mesh="edge_cartesian"/>
-         <initial-relaxation value="0.1"/>
-         <max-used-iterations value="30"/>
-         <time-windows-reused value="20"/>
-         <filter type="QR2" limit="1e-2"/>
-       </acceleration:IQN-ILS>
-    </coupling-scheme:serial-implicit>
-    -->
-
     <coupling-scheme:serial-explicit>
        <participants first="Core" second="Edge"/>
-       <max-time value="1.0"/>
-       <time-window-size value="4e-5"/>
+       <max-time value="0.25"/>
+       <time-window-size value="6.4e-4"/>
        <exchange data="value" mesh="edge_cartesian" from="Core" to="Edge"/>
        <exchange data="flux" mesh="edge_polar" from="Edge" to="Core"/>
     </coupling-scheme:serial-explicit>
