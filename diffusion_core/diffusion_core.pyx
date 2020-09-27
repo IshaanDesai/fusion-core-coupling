@@ -113,8 +113,6 @@ class Diffusion:
         # self.logger.info('dt = {}'.format(dt))
         print('dt = {}'.format(dt))
         t_total, t_out = self._config.get_total_time(), self._config.get_t_output()
-        cdef int n_t = int(t_total/dt)
-        cdef int n_out = int(t_out/dt)
 
         cdef double dr = mesh.get_r_spacing()
         cdef double dtheta = mesh.get_theta_spacing()
@@ -157,10 +155,10 @@ class Diffusion:
         # Initialize preCICE interface
         cdef double precice_dt = self._interface.initialize()
 
-        # Write initial data
-        write_vtk(u, mesh, 0)
-        # self.logger.info('Initial state: VTK file output written at t = {}'.format(0.0))
-        print('Initial state: VTK file output written at t = {}'.format(0.0))
+        dt = min(precice_dt, dt)
+        cdef int n_t = int(t_total/dt)
+        cdef int n_out = int(t_out/dt)
+        print("n_t = {}, n_out = {}".format(n_t, n_out))
 
         # Initialize to non-zero coupling values
         if self._interface.is_action_required(precice.action_write_initial_data()):

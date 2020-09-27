@@ -89,7 +89,7 @@ def compare_coupled(res_num, ref_coords, ref_data):
     assert interp_core_f.shape == core_f.shape
 
     print("---------- Coupling ----------")
-    print("Mesh resolution ({}): Polar result has {} point, PARALLAX result has {} point".format(mesh_res, core_f.size,
+    print("Mesh resolution ({}): Polar result has {} point, PARALLAX result has {} point".format(res_num, core_f.size,
                                                                                                  edge_f.size))
 
     # Convert array data to dicts so that reference value can be mapped to points for
@@ -211,7 +211,7 @@ def plot_ref_cross_section(ref_f, ref_pts):
 
 
 # Finest resolution for Polar code considered as reference result
-ref_points, ref_field = read_data('./output_ref/polar_ref.csv')
+ref_points, ref_field = read_data('./output_ref/polar_ref2.csv')
 print("Reference result has {} points".format(ref_field.size))
 
 # For each mesh resolution, fit data by interpolation and calculate error by L2 norm
