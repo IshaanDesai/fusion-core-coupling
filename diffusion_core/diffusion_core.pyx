@@ -146,7 +146,7 @@ class Diffusion:
             bnd_wall.set_bnd_vals_mms(u, n*dt)
             bnd_core.set_bnd_vals_mms(u, n*dt)
 
-            if n%n_out == 0:
+            if n%n_out == 0 or n == n_t-1:
                 write_csv(u, mesh, n+1)
                 write_vtk(u, mesh, n+1)
                 self.logger.info('VTK file output written at t = %f', n*dt)
