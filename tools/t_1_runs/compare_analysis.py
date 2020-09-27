@@ -222,11 +222,6 @@ rmax_core = 0.4
 rmin_edge = [0.388, 0.394, 0.397]
 rmax_edge = 0.5
 
-# plot
-plt.xlabel('x coordinate')
-plt.ylabel('field value')
-plt.title('Line plots for various mesh resolutions')
-
 corepts_plot, edgepts_plot = [], []
 corev_plot, edgev_plot, core_flux_plot, edge_flux_plot = [], [], [], []
 core_pts, edge_pts = None, None
@@ -243,7 +238,11 @@ for res in range(mesh_res):
     edge_flux_plot.append(edge_flux)
 
 refpts_plot, refv_plot, ref_flux_plot = plot_ref_cross_section(ref_field, ref_points)
-plt.plot()
+
+# plot
+plt.xlabel('x coordinate')
+plt.ylabel('field value')
+plt.title('Values along line section, t = 1')
 
 plt.plot(refpts_plot, refv_plot, 'k-', label="Reference Result", linewidth=1.5)
 
@@ -278,7 +277,7 @@ for i in range(999):
 
 plt.xlabel('x coordinate')
 plt.ylabel('flux')
-plt.title('Flux along line plots for various mesh resolutions')
+plt.title('Flux along line section, t = 1')
 
 plt.plot(ref_flux_pts, ref_flux_plot, 'k-', label="Reference Result", linewidth=1.5)
 
@@ -293,7 +292,6 @@ plt.plot(edge_flux_pts[2], edge_flux_plot[2], 'r-*', label="Edge Mesh Res 2")
 plt.legend(loc='best')
 plt.show()
 
-
 err_edge = np.zeros(mesh_res)
 err_core = np.zeros(mesh_res)
 err_coupling = np.zeros(mesh_res)
@@ -306,7 +304,7 @@ plt.xscale('log')
 plt.yscale('log')
 plt.xlabel('mesh size')
 plt.ylabel('l2 error')
-plt.title('Varying overlap 2*dx in Edge participant (0.012, 0.006, 0.003)')
+plt.title('Varying overlap, t = 1')
 
 mesh_resolutions = [50, 100, 200]
 # Plot monolithic PARALLAX comparison
