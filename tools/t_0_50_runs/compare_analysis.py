@@ -49,7 +49,7 @@ def compare_monolithic(res_num, ref_coords, ref_data):
     assert interp_core_f.shape == core_f.shape
 
     print("---------- Monolithic ----------")
-    print("Mesh resolution ({}): Polar result has {} point, PARALLAX result has {} point".format(mesh_res, core_f.size,
+    print("Mesh resolution ({}): Polar result has {} point, PARALLAX result has {} point".format(res_num, core_f.size,
                                                                                                  edge_f.size))
 
     error_edge, ref_sum = 0, 0
@@ -89,7 +89,7 @@ def compare_coupled(res_num, ref_coords, ref_data):
     assert interp_core_f.shape == core_f.shape
 
     print("---------- Coupling ----------")
-    print("Mesh resolution ({}): Polar result has {} point, PARALLAX result has {} point".format(mesh_res, core_f.size,
+    print("Mesh resolution ({}): Polar result has {} point, PARALLAX result has {} point".format(res_num, core_f.size,
                                                                                                  edge_f.size))
 
     # Convert array data to dicts so that reference value can be mapped to points for
@@ -215,11 +215,11 @@ ref_points, ref_field = read_data('./output_ref/polar_ref2.csv')
 print("Reference result has {} points".format(ref_field.size))
 
 # For each mesh resolution, fit data by interpolation and calculate error by L2 norm
-mesh_res = 3
+mesh_res = 4
 
 rmin_core = 0.2
 rmax_core = 0.4
-rmin_edge = [0.388, 0.394, 0.397]
+rmin_edge = [0.388, 0.394, 0.397, 0.3985]
 rmax_edge = 0.5
 
 
@@ -243,7 +243,7 @@ refpts_plot, refv_plot, ref_flux_plot = plot_ref_cross_section(ref_field, ref_po
 # plot
 plt.xlabel('x coordinate')
 plt.ylabel('field value')
-plt.title('Value along line plot, t = 0.5')
+plt.title('Values along line section, t = 0.5')
 
 plt.plot(refpts_plot, refv_plot, 'k-', label="Reference Result", linewidth=1.5)
 
@@ -255,6 +255,10 @@ plt.plot(edgepts_plot[1], edgev_plot[1], 'r--', label="Edge Mesh Res 1")
 
 plt.plot(corepts_plot[2], corev_plot[2], 'b-*', label="Core Mesh Res 2")
 plt.plot(edgepts_plot[2], edgev_plot[2], 'r-*', label="Edge Mesh Res 2")
+
+plt.plot(corepts_plot[3], corev_plot[3], 'b-o', label="Core Mesh Res 3")
+plt.plot(edgepts_plot[3], edgev_plot[3], 'r-o', label="Edge Mesh Res 3")
+
 plt.legend(loc='best')
 plt.show()
 
@@ -278,7 +282,7 @@ for i in range(999):
 
 plt.xlabel('x coordinate')
 plt.ylabel('flux')
-plt.title('Flux along line plot, t = 0.5')
+plt.title('Flux along line section, t = 0.5')
 
 plt.plot(ref_flux_pts, ref_flux_plot, 'k-', label="Reference Result", linewidth=1.5)
 
@@ -290,9 +294,12 @@ plt.plot(edge_flux_pts[1], edge_flux_plot[1], 'r--', label="Edge Mesh Res 1")
 
 plt.plot(core_flux_pts[2], core_flux_plot[2], 'b-*', label="Core Mesh Res 2")
 plt.plot(edge_flux_pts[2], edge_flux_plot[2], 'r-*', label="Edge Mesh Res 2")
+
+plt.plot(core_flux_pts[3], core_flux_plot[3], 'b-o', label="Core Mesh Res 3")
+plt.plot(edge_flux_pts[3], edge_flux_plot[3], 'r-o', label="Edge Mesh Res 3")
+
 plt.legend(loc='best')
 plt.show()
-
 
 err_edge = np.zeros(mesh_res)
 err_core = np.zeros(mesh_res)
@@ -306,9 +313,9 @@ plt.xscale('log')
 plt.yscale('log')
 plt.xlabel('mesh size')
 plt.ylabel('l2 error')
-plt.title('Varying overlap, t = 0.5')
+plt.title('Overlap 2*dx, t = 0.5')
 
-mesh_resolutions = [50, 100, 200]
+mesh_resolutions = [50, 100, 200, 400]
 # # Plot monolithic PARALLAX comparison
 # plt.plot(mesh_resolutions, err_edge, 'rs', label="Edge monolithic", linewidth=2)
 # O1_err_edge = [err_edge[0], err_edge[0]/2, err_edge[0]/4]
@@ -325,9 +332,9 @@ mesh_resolutions = [50, 100, 200]
 
 # Plot PARALLAX - Polar coupled solution comparison
 plt.plot(mesh_resolutions, err_coupling, 'bs', label="Coupling", linewidth=2)
-O1_err_coupling = [err_coupling[0], err_coupling[0]/2, err_coupling[0]/4]
+O1_err_coupling = [err_coupling[0], err_coupling[0]/2, err_coupling[0]/4, err_coupling[0]/8]
 plt.plot(mesh_resolutions, O1_err_coupling, 'b--', label="O(1) Coupling", linewidth=1)
-O2_err_coupling = [err_coupling[0], err_coupling[0]/4, err_coupling[0]/16]
+O2_err_coupling = [err_coupling[0], err_coupling[0]/4, err_coupling[0]/16, err_coupling[0]/64]
 plt.plot(mesh_resolutions, O2_err_coupling, 'b-.', label="O(2) Coupling", linewidth=1)
 
 plt.legend(loc='best')
