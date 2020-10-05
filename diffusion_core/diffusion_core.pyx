@@ -168,6 +168,10 @@ class Diffusion:
 
         self._interface.initialize_data()
 
+        # Output initial state
+        write_vtk(u, mesh, 0)
+        write_csv(u, mesh, 0)
+
         # Time loop
         cdef int n = 0
         cdef double t = 0.0
