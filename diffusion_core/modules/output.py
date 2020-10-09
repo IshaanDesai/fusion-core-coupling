@@ -5,24 +5,23 @@ For the VTK export the following package is used: https://github.com/paulo-herre
 
 from pyevtk.hl import gridToVTK
 import numpy as np
-from .mesh_2d import MeshVertexType
 import csv
 
 
-def write_vtk(field, mesh, t):
+def write_vtk(field, xpol, ypol, t):
     filename = "field_out_{}".format(t)
-    nr, ntheta = mesh.get_n_points_axiswise()
+    nrho, ntheta = xpol.size, ypol.size
     nz = 1
-    x_out = np.zeros((nr, ntheta, nz))
-    y_out = np.zeros((nr, ntheta, nz))
-    z_out = np.zeros((nr, ntheta, nz))
-    point_type = np.zeros((nr, ntheta, nz))
-    field_out = np.zeros((nr, ntheta, nz))
+    x_out = np.zeros((nrho, ntheta, nz))
+    y_out = np.zeros((nrho, ntheta, nz))
+    z_out = np.zeros((nrho, ntheta, nz))
+    point_type = np.zeros((nrho, ntheta, nz))
+    field_out = np.zeros((nrho, ntheta, nz))
 
     counter = 0
-    for i in range(nr):
+    for i in range(nrho):
         for j in range(ntheta):
-            x_out[i, j, 0] = mesh.get_x(counter)
+            x_out[i, j, 0] = 
             y_out[i, j, 0] = mesh.get_y(counter)
             z_out[i, j, 0] = 0
             if mesh.get_point_type(i, j) == MeshVertexType.BC_CORE or mesh.get_point_type(i, j) == MeshVertexType.BC_WALL:

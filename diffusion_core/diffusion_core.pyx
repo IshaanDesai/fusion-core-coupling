@@ -5,10 +5,8 @@ Code to simulate diffusion in a polar coordinate system replicating a gyrokineti
 import numpy as np
 cimport numpy as np
 cimport cython
-from diffusion_core.modules.mesh_2d import Mesh, MeshVertexType
 from diffusion_core.modules.output import write_vtk, write_csv
 from diffusion_core.modules.config import Config
-from diffusion_core.modules.boundary import Boundary, BoundaryType
 from diffusion_core.modules.mms cimport MMS
 import math
 import time
@@ -50,19 +48,18 @@ class Diffusion:
         cdef double [:, ::1] jac = jac_np
 
         # Get metric coefficients from NetCDF file
-        g_rhorho_np, g_rhotheta_np = np.array(ds['g_rhorho'][:]), np.array(ds['g_rhotheta'][:])
-        cdef double [:, ::1] g_rhorho = g_rhorho_np
-        cdef double [:, ::1] g_rhotheta = g_rhotheta_np
-        g_thetatheta_np, g_phiphi_np = np.array(ds['g_thetatheta'][:]), np.array(ds['g_phiphi'][:])
-        cdef double [:, ::1]  g_thetatheta = g_thetatheta_np
-        cdef double [:, ::1] g_phiphi = g_phiphi_np
+        g_rr_np, g_rt_np = np.array(ds['g_rhorho'][:]), np.array(ds['g_rhotheta'][:])
+        cdef double [:, ::1] g_rr = g_rr_np
+        cdef double [:, ::1] g_rt = g_rt_np
+        g_tt_np, = np.array(ds['g_thetatheta'][:])
+        cdef double [:, ::1]  g_tt = g_tt_np
 
         # Field variable array
         u_np = np.zeros((nrho, ntheta), dtype=np.double)
         cdef double [:, ::1] u = u_np
         # Field delta change array
-        du_perp_np = np.zeros((nrho, ntheta), dtype=np.double)
-        cdef double [:, ::1] du_perp = du_perp_np
+        du_np = np.zeros((nrho, ntheta), dtype=np.double)
+        cdef double [:, ::1] du = du_np
 
         # Initializing custom initial state (sinosoidal)
         for i in range(nrho):
@@ -87,21 +84,6 @@ class Diffusion:
         cdef double drho = ds.globalattributes['drho']
         cdef double dtheta = ds.globalattributes['dtheta']
 
-        # Calculate rho and theta values at each grid point
-        rho_minus_np = np.zeros((nrho, ntheta), dtype=np.double)
-        cdef double [:, ::1] rho_minus = rho_minus_np
-        rho_plus_np = np.zeros((nrho, ntheta), dtype=np.double)
-        cdef double [:, ::1] rho_plus = rho_plus_np
-
-        for i in range(1, nrho - 1):
-            for j in range(ntheta):
-                # rho_(i,j) value
-                rho_self[i, j] = rho[i, j]
-                # rho_(i-1/2,j) value
-                rho_minus[i, j] = (rho[i-1, j] + rho[i, j]) / 2
-                # r_(i+1/2,j) value
-                r_plus[i, j] = (rho[i+1, j] + rho[i, j]) / 2
-
         # Check the CFL Condition for Diffusion Equation
         cfl_rho = dt * diffc_perp / (drho * drho)
         self.logger.info('CFL Coefficient with radial param = %f. Must be less than 0.5', cfl_rho)
@@ -114,51 +96,59 @@ class Diffusion:
         cdef double u_sum
         for n in range(n_t):
             # Assign values to ghost cells for periodicity in theta direction
-            for i in range(1, nr - 1):
-                # Calculating for points theta = 0
-                # Staggered grid scheme to evaluate derivatives in radial direction
-                du_perp[i, 0] = (rho_plus[i, 0]*(u[i+1, 0] - u[i, 0]) - rho_minus[i, 0]*(u[i, 0] - u[i-1, 0])) / (
-                    r_self[i, 0]*dr*dr)
-                # Second order central difference components in theta direction
-                du_perp[i, 0] += (u[i, ntheta-1] + u[i, 1] - 2*u[i, 0]) / (r_self[i, 0]*r_self[i, 0]*dtheta*dtheta)
+            jp = [ntheta-2, ntheta-1, 0, 1]
+            for i in range(1, nrho - 1):
+                for j in range(1, 3):
+                    # Staggered grid for rho-rho diagonal term
+                    du[i, jp[j]] = ((jac[i+1, jp[j]] + jac[i, jp[j]])*(g_rr[i+1, jp[j]] + g_rr[i, jp[j]])*(u[i+1, jp[j]] - u[i, jp[j]]) -
+                        (jac[i, jp[j]] + jac[i-1, jp[j]])*(g_rr[i, jp[j]] + g_rr[i-1, jp[j]])*(u[i, jp[j]] - u[i-1, jp[j]])) / (4*drho*drho)
 
-                # Calculating for points theta = 2*pi - dtheta
-                # Staggered grid scheme to evaluate derivatives in radial direction
-                du_perp[i, ntheta-1] = (r_plus[i, ntheta-1]*(u[i+1, ntheta-1] - u[i, ntheta-1]) -
-                    r_minus[i, ntheta-1]*(u[i, ntheta-1] - u[i-1, ntheta-1])) / (r_self[i, ntheta-1]*dr*dr)
-                # Second order central difference components in theta direction
-                du_perp[i, ntheta-1] += (u[i, ntheta-2] + u[i, 0] - 2*u[i, ntheta-1]) / (
-                    r_self[i, ntheta-1]*r_self[i, ntheta-1]*dtheta*dtheta)
+                    # Staggered grid for theta-theta diagonal term
+                    du[i, jp[j]] += ((jac[i, jp[j+1]] + jac[i, jp[j]])*(g_tt[i, jp[j+1]] + g_tt[i, jp[j]])*(u[i, jp[j+1]] - u[i, jp[j]]) -
+                        (jac[i, jp[j]] + jac[i, jp[j-1]])*(g_tt[i, jp[j]] + g_tt[i, jp[j-1]])*(u[i, jp[j]] - u[i-1, jp[j]])) / (4*dtheta*dtheta)
+
+                    # Off-diagonal term rho-theta
+                    du[i, jp[j]] += (jac[i+1, jp[j]]*g_rt[i+1, jp[j]]*(u[i+1, jp[j+1]] - u[i+1, jp[j-1]]) -
+                        jac[i-1, jp[j]]*g_rt[i-1, jp[j]]*(u[i-1, jp[j+1]] - u[i-1, jp[j-1]])) / (4*drho*dtheta)
+
+                    # Off-diagonal term theta-rho
+                    du[i, jp[j]] += (jac[i, jp[j+1]]*g_rt[i, jp[j+1]]*(u[i+1, jp[j+1]] - u[i-1, jp[j+1]]) -
+                        jac[i, jp[j-1]]*g_rt[i, jp[j-1]]*(u[i+1, jp[j-1]] - u[i-1, jp[j-1])) / (4*dtheta*drho)
 
             # Iterate over all grid points in a Cartesian grid fashion
-            for i in range(1, nr - 1):
-                for j in range(1, ntheta - 1):
-                    # Staggered grid scheme to evaluate derivatives in radial direction
-                    du_perp[i, j] = (r_plus[i, j]*(u[i+1, j] - u[i, j]) - r_minus[i, j]*(u[i, j] - u[i-1, j])) / (
-                               r_self[i, j]*dr*dr)
+            for i in range(1, nrho-1):
+                for j in range(1, ntheta-1):
+                    # Staggered grid for rho-rho diagonal term
+                    du[i, j] = ((jac[i+1, j] + jac[i, j])*(g_rr[i+1, j] + g_rr[i, j])*(u[i+1, j] - u[i, j]) -
+                        (jac[i, j] + jac[i-1, j])*(g_rr[i, j] + g_rr[i-1,j])*(u[i, j] - u[i-1, j])) / (4*drho*drho)
 
-                    # Second order central difference components in theta direction
-                    du_perp[i, j] += (u[i, j-1] + u[i, j+1] - 2*u[i, j]) / (r_self[i, j]*r_self[i, j]*dtheta*dtheta)
+                    # Staggered grid for theta-theta diagonal term
+                    du[i, j] += ((jac[i, j+1] + jac[i, j])*(g_tt[i, j+1] + g_tt[i, j])*(u[i, j+1] - u[i, j]) -
+                        (jac[i, j] + jac[i, j-1])*(g_tt[i, j] + g_tt[i, j-1])*(u[i, j] - u[i-1, j])) / (4*dtheta*dtheta)
+
+                    # Off-diagonal term rho-theta
+                    du[i, j] += (jac[i+1, j]*g_rt[i+1, j]*(u[i+1, j+1] - u[i+1, j-1]) -
+                        jac[i-1, j]*g_rt[i-1, j]*(u[i-1, j+1] - u[i-1, j-1])) / (4*drho*dtheta)
+
+                    # Off-diagonal term theta-rho
+                    du[i, j] += (jac[i, j+1]*g_rt[i, j+1]*(u[i+1, j+1] - u[i-1, j+1]) -
+                        jac[i, j-1]*g_rt[i, j-1]*(u[i+1, j-1] - u[i-1, j-1])) / (4*dtheta*drho)
 
             # Update scheme
             for i in range(1, nr - 1):
                 for j in range(ntheta):
-                    u[i, j] += dt*diffc_perp*du_perp[i, j]
-
-            # Set Neumann boundary conditions in each iteration
-            bnd_wall.set_bnd_vals_mms(u, n*dt)
-            bnd_core.set_bnd_vals_mms(u, n*dt)
+                    u[i, j] += dt*diffc*du[i, j] / jac[i, j]
 
             if n%n_out == 0 or n == n_t-1:
-                write_csv(u, mesh, n+1)
-                write_vtk(u, mesh, n+1)
+                write_csv(u, xpol, ypol, n+1)
+                write_vtk(u, xpol, ypol n+1)
                 self.logger.info('VTK file output written at t = %f', n*dt)
                 u_sum = 0
-                for i in range(nr):
+                for i in range(nrho):
                     for j in range(0, ntheta):
                         u_sum += u[i, j]
 
-                self.logger.info("Elapsed time = {}  || Field sum = {}".format(n*dt, u_sum/(nr*ntheta)))
+                self.logger.info("Elapsed time = {}  || Field sum = {}".format(n*dt, u_sum/(nrho*ntheta)))
                 self.logger.info("Elapsed CPU time = {}".format(time.clock()))
 
         self.logger.info("Total CPU time = {}".format(time.clock()))
