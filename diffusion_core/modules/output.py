@@ -10,37 +10,28 @@ import csv
 
 def write_vtk(field, xpol, ypol, t):
     filename = "field_out_{}".format(t)
-    nrho, ntheta = xpol.size, ypol.size
+    nrho, ntheta = 50, 200
     nz = 1
-    x_out = np.zeros((nrho, ntheta, nz))
-    y_out = np.zeros((nrho, ntheta, nz))
-    z_out = np.zeros((nrho, ntheta, nz))
-    point_type = np.zeros((nrho, ntheta, nz))
-    field_out = np.zeros((nrho, ntheta, nz))
+    x_out = np.zeros((ntheta, nrho, nz))
+    y_out = np.zeros((ntheta, nrho, nz))
+    z_out = np.zeros((ntheta, nrho, nz))
+    point_type = np.zeros((ntheta, nrho, nz))
+    field_out = np.zeros((ntheta, nrho, nz))
 
-    counter = 0
-    for i in range(nrho):
-        for j in range(ntheta):
-            x_out[i, j, 0] = 
-            y_out[i, j, 0] = mesh.get_y(counter)
+    for i in range(ntheta):
+        for j in range(nrho):
+            x_out[i, j, 0] = xpol[i, j]
+            y_out[i, j, 0] = ypol[i, j]
             z_out[i, j, 0] = 0
-            if mesh.get_point_type(i, j) == MeshVertexType.BC_CORE or mesh.get_point_type(i, j) == MeshVertexType.BC_WALL:
-                point_type[i, j, 0] = 1
-            elif mesh.get_point_type(i, j) == MeshVertexType.GRID:
-                point_type[i, j, 0] = 0
             field_out[i, j, 0] = field[i, j]
-            counter += 1
 
     gridToVTK("./output/"+filename, x_out, y_out, z_out, pointData={"field": field_out, "type": point_type})
 
 
-def write_csv(field, mesh, n):
-    nr, ntheta = mesh.get_n_points_axiswise()
-    counter = 0
+def write_csv(field, xpol, ypol, n):
+    nrho, ntheta = 50, 200
     with open('./output/polar_'+str(n)+'.csv', mode='w') as file:
         file_writer = csv.writer(file, delimiter=',')
-        for i in range(nr):
-            for j in range(ntheta):
-                file_writer.writerow([mesh.get_x(counter), mesh.get_y(counter), field[i, j]])
-                counter += 1
-
+        for i in range(ntheta):
+            for j in range(nrho):
+                file_writer.writerow([xpol[i, j], ypol[i, j], field[i, j]])
