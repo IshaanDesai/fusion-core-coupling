@@ -5,7 +5,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=8000
-#SBATCH --time=24:00:00
+#SBATCH --time=01:30:00
 
 # Reloading correct modules for python polar code:
 module load anaconda/3/2019.03
