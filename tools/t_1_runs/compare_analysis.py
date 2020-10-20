@@ -59,8 +59,10 @@ def compare_monolithic(res_num, ref_coords, ref_data):
             error_edge += (edge_f[i] - u_ref) ** 2
             ref_sum += u_ref ** 2
 
+    assert ref_sum != 0
+    print("error_edge = {}".format(error_edge))
     error_edge = pow(error_edge / ref_sum, 0.5)
-    print("Error between reference and edge case with mesh res ({}) = {}".format(res, error_edge))
+    print("Error between reference and edge case with mesh res ({}) = {}".format(res_num, error_edge))
 
     error_core, ref_sum = 0, 0
     for i in range(core_f.size):
@@ -69,8 +71,10 @@ def compare_monolithic(res_num, ref_coords, ref_data):
             error_core += (core_f[i] - u_ref) ** 2
             ref_sum += u_ref ** 2
 
+    assert ref_sum != 0
+    print("error_core = {}".format(error_core))
     error_core = pow(error_core / ref_sum, 0.5)
-    print("Error between reference and core case with mesh res ({}) = {}".format(res, error_core))
+    print("Error between reference and core case with mesh res ({}) = {}".format(res_num, error_core))
     print("--------------------------------")
 
     return error_edge, error_core
@@ -120,8 +124,9 @@ def compare_coupled(res_num, ref_coords, ref_data):
 
             diff_val[point] = edge_coupling_f[point] - edge_ref_f[point]
 
+    assert ref_edge != 0
     error_edge = pow(error_edge / ref_edge, 0.5)
-    print("Error between reference and Edge participant with mesh res ({}) = {}".format(res, error_edge))
+    print("Error between reference and Edge participant with mesh res ({}) = {}".format(res_num, error_edge))
 
     error_core, ref_core = 0, 0
     for point in core_ref_f.keys():
@@ -135,11 +140,13 @@ def compare_coupled(res_num, ref_coords, ref_data):
 
             diff_val[point] = core_coupling_f[point] - core_ref_f[point]
 
+    assert ref_core != 0
     error_core = pow(error_core / ref_core, 0.5)
-    print("Error between reference and Core participant with mesh res ({}) = {}".format(res, error_core))
+    print("Error between reference and Core participant with mesh res ({}) = {}".format(res_num, error_core))
 
+    assert ref_sum != 0
     error_coupling = pow(error_coupling / ref_sum, 0.5)
-    print("Error between reference and coupled case with mesh res ({}) = {}".format(res, error_coupling))
+    print("Error between reference and coupled case with mesh res ({}) = {}".format(res_num, error_coupling))
     print("------------------------------")
 
     # write_data_from_dict('./output_coupling_' + str(res_num) + '/diff_val.csv', diff_val)
@@ -211,7 +218,7 @@ def plot_ref_cross_section(ref_f, ref_pts):
 
 
 # Finest resolution for Polar code considered as reference result
-ref_points, ref_field = read_data('./output_ref/polar_ref2.csv')
+ref_points, ref_field = read_data('./output_ref/polar_ref.csv')
 print("Reference result has {} points".format(ref_field.size))
 
 # For each mesh resolution, fit data by interpolation and calculate error by L2 norm
