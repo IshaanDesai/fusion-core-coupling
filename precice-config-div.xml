@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+
+<precice-configuration>
+
+    <log>
+	<sink type="stream" output="stdout" filter="%Severity% > debug" enabled="true"/>
+    </log>
+  
+  <solver-interface dimensions="2">
+    
+    <data:scalar name="value"/>
+
+    <mesh name="core_mesh">
+       <use-data name="value"/>
+    </mesh>
+
+    <mesh name="edge_mesh">
+       <use-data name="value"/>
+    </mesh>
+    
+    <participant name="Core">
+      <use-mesh name="core_mesh" provide="yes"/>
+      <use-mesh name="edge_mesh" from="Edge"/>
+      <write-data name="value" mesh="core_mesh"/>
+      <mapping:rbf-thin-plate-splines direction="write" from="core_mesh" to="edge_mesh" constraint="consistent"/>
+    </participant>
+    
+    <participant name="Edge">		
+      <use-mesh name="edge_mesh" provide="yes"/>
+      <read-data name="value" mesh="edge_mesh"/>
+    </participant>
+
+    <m2n:sockets from="Core" to="Edge" network="ib0"/>
+
+    <coupling-scheme:serial-explicit>
+       <participants first="Core" second="Edge"/>
+       <max-time value="0.5"/>
+       <time-window-size value="2e-6"/>
+       <exchange data="value" mesh="edge_mesh" from="Core" to="Edge"/>
+    </coupling-scheme:serial-explicit>
+
+  </solver-interface>
+</precice-configuration>

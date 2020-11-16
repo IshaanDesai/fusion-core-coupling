@@ -27,12 +27,12 @@ class Config:
         self._write_data_name = None
 
         self._dims = None
-        self._rmin = None
-        self._rmax = None
-        self._r_points = None
+        self._rhomin = None
+        self._rhomax = None
+        self._rho_points = None
         self._theta_points = None
 
-        self._diffc_perp = None
+        self._diffc = None
         self._dt = None
         self._t_total = None
         self._t_out = None
@@ -66,12 +66,12 @@ class Config:
         self._read_data_name = data["interface"]["read_data_name"]
 
         self._dims = data["mesh_parameters"]["dimensions"]
-        self._rmin = data["mesh_parameters"]["r_inner"]
-        self._rmax = data["mesh_parameters"]["r_outer"]
-        self._r_points = data["mesh_parameters"]["radial_points"]
-        self._theta_points = data["mesh_parameters"]["circular_points"]
+        self._rhomin = data["mesh_parameters"]["rhopol_min"]
+        self._rhomax = data["mesh_parameters"]["rhopol_max"]
+        self._rho_points = data["mesh_parameters"]["rho_points"]
+        self._theta_points = data["mesh_parameters"]["theta_points"]
 
-        self._diffc_perp = data["diffusion_parameters"]["coeff_perp"]
+        self._diffc = data["diffusion_parameters"]["diff_coeff"]
         self._dt = data["simulation_parameters"]["timestep"]
         self._t_total = data["simulation_parameters"]["total_time"]
         self._t_out = data["simulation_parameters"]["t_output"]
@@ -101,20 +101,20 @@ class Config:
     def get_dims(self):
         return self._dims
 
-    def get_rmin(self):
-        return self._rmin
+    def get_rhomin(self):
+        return self._rhomin
 
-    def get_rmax(self):
-        return self._rmax
+    def get_rhomax(self):
+        return self._rhomax
 
-    def get_r_points(self):
-        return self._r_points
+    def get_rho_points(self):
+        return self._rho_points
 
     def get_theta_points(self):
         return self._theta_points
 
     def get_diffusion_coeff(self):
-        return self._diffc_perp
+        return self._diffc
 
     def get_dt(self):
         return self._dt
