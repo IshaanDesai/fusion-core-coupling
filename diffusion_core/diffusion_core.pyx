@@ -7,6 +7,7 @@ cimport numpy as np
 cimport cython
 from diffusion_core.modules.output import write_vtk, write_csv
 from diffusion_core.modules.config import Config
+from diffusion_core.modules.mesh import Mesh
 import math
 import time
 import logging
@@ -26,35 +27,24 @@ class Diffusion:
         # Iterators
         cdef Py_ssize_t i, j
 
-        # Read metric coefficients NetCDF file
-        if config.get_mesh_type() == "CERFONS":
-            ds = nc.Dataset('./cerfons_geom_data.nc')
-        elif config.get_mesh_type() == "CIRCULAR":
-            ds = nc.Dataset('./circular_geom_data.nc')
-
         # Mesh setup
-        nrho, ntheta = ds.dimensions['nrho'].size, ds.dimensions['ntheta'].size
-        assert nrho == config.get_rho_points()
-        assert ntheta == config.get_theta_points()
+        mesh = None
+        if config.get_mesh_type() == "CERFONS":
+            mesh = Mesh('./cerfons_geom_data.nc')
+        elif config.get_mesh_type() == "CIRCULAR":
+            mesh = Mesh('./circular_geom_data.nc')
 
-        # Get geometrical variables from NetCDF file
-        rho_np, theta_np = np.array(ds['rho'][:]), np.array(ds['theta'][:])
-        cdef double [::1] rho = rho_np
-        cdef double [::1] theta = theta_np
-        xpol_np, ypol_np = np.array(ds['xpol'][:]), np.array(ds['ypol'][:])
-        cdef double [:, ::1] xpol = xpol_np
-        cdef double [:, ::1] ypol = ypol_np
-
-        # Get Jacobian from NetCDF file
-        jac_np = np.array(ds['jacobian'][:])
-        cdef double [:, ::1] jac = jac_np
-
-        # Get metric coefficients from NetCDF file
-        g_rr_np, g_rt_np = np.array(ds['g_rhorho'][:]), np.array(ds['g_rhotheta'][:])
-        cdef double [:, ::1] g_rr = g_rr_np
-        cdef double [:, ::1] g_rt = g_rt_np
-        g_tt_np = np.array(ds['g_thetatheta'][:])
-        cdef double [:, ::1]  g_tt = g_tt_np
+        cdef double drho = mesh.get_drho()
+        cdef double dtheta = mesh.get_dtheta()
+        nrho, ntheta = mesh.get_nrho(), mesh.get_ntheta()
+        cdef double [::1] rho = mesh.get_rho_vals()
+        cdef double [::1] theta = mesh.get_theta_vals()
+        cdef double [:, ::1] xpol = mesh.get_x_vals()
+        cdef double [:, ::1] ypol = mesh.get_y_vals()
+        cdef double [:, ::1] jac = mesh.get_jacobian()
+        cdef double [:, ::1] g_rr = mesh.get_g_rho_rho()
+        cdef double [:, ::1] g_rt = mesh.get_g_rho_theta()
+        cdef double [:, ::1]  g_tt = mesh.get_g_theta_theta()
 
         # Field variable array
         u_np = np.zeros((ntheta, nrho), dtype=np.double)
@@ -88,9 +78,6 @@ class Diffusion:
         t_total, t_out = config.get_total_time(), config.get_t_output()
         cdef int n_t = int(t_total/dt)
         cdef int n_out = int(t_out/dt)
-
-        cdef double drho = ds.getncattr('drho')
-        cdef double dtheta = ds.getncattr('dtheta')
 
         # Check the CFL Condition for Diffusion Equation
         cfl_rho = dt * diffc / (drho * drho)
