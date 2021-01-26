@@ -7,6 +7,7 @@
       "read_data_name": "Temperature"
     },
   "mesh_parameters": {
+      "type": "CIRCULAR",
       "dimensions": 2,
       "rhopol_min": 0.5,
       "rhopol_max": 0.9,
@@ -22,8 +23,8 @@
       "t_output": 0.1
   },
   "init_conditions": {
-      "xb": 0.85,
-      "yb": -0.4,
+      "xb": 0.0,
+      "yb": -0.7,
       "wxb": 0.05,
       "wyb": 0.05
   }

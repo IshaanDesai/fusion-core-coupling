@@ -26,8 +26,11 @@ class Diffusion:
         # Iterators
         cdef Py_ssize_t i, j
 
-        # Read metric coefficient NetCDF file
-        ds = nc.Dataset('./polars.nc')
+        # Read metric coefficients NetCDF file
+        if config.get_mesh_type() == "CERFONS":
+            ds = nc.Dataset('./cerfons_geom_data.nc')
+        elif config.get_mesh_type() == "CIRCULAR":
+            ds = nc.Dataset('./circular_geom_data.nc')
 
         # Mesh setup
         nrho, ntheta = ds.dimensions['nrho'].size, ds.dimensions['ntheta'].size
@@ -154,7 +157,7 @@ class Diffusion:
                         u_sum += u[i, j]
 
                 self.logger.info("Elapsed time = {}  || Field sum = {}".format(n*dt, u_sum/(nrho*ntheta)))
-                self.logger.info("Elapsed CPU time = {}".format(time.clock()))
+                # self.logger.info("Elapsed CPU time = {}".format(time.clock()))
 
-        self.logger.info("Total CPU time = {}".format(time.clock()))
+        # self.logger.info("Total CPU time = {}".format(time.clock()))
         # End
