@@ -8,6 +8,7 @@ cimport cython
 from diffusion_core.modules.output import write_vtk, write_csv
 from diffusion_core.modules.config import Config
 from diffusion_core.modules.mesh import Mesh
+from diffusion_core.modules.boundary import Boundary
 import math
 import time
 import logging
@@ -30,9 +31,9 @@ class Diffusion:
         # Mesh setup
         mesh = None
         if config.get_mesh_type() == "CERFONS":
-            mesh = Mesh('./cerfons_geom_data.nc')
+            mesh = Mesh(config, './cerfons_geom_data.nc')
         elif config.get_mesh_type() == "CIRCULAR":
-            mesh = Mesh('./circular_geom_data.nc')
+            mesh = Mesh(config, './circular_geom_data.nc')
 
         cdef double drho = mesh.get_drho()
         cdef double dtheta = mesh.get_dtheta()
@@ -69,6 +70,10 @@ class Diffusion:
             for j in range(nrho):
                 if j == 0 or j == nrho-1:
                     u[i, j] = 0.0
+
+        # Set boundary conditions
+        flux_vals = np.full((ntheta))
+        boundary = Boundary(config, mesh, flux_vals, u)
 
         # Get parameters from config and mesh modules
         diffc = config.get_diffusion_coeff()
@@ -133,6 +138,9 @@ class Diffusion:
             for i in range(ntheta):
                 for j in range(nrho):
                     u[i, j] += dt*diffc*du[i, j] / jac[i, j]
+
+            # Update boundary values
+            boundary.set_bnd_vals(u, flux_vals)
 
             if n%n_out == 0 or n == n_t-1:
                 write_csv(u, xpol, ypol, n+1)
