@@ -26,6 +26,7 @@ class Config:
         self._read_data_name = None
         self._write_data_name = None
 
+        self._meshtype = None
         self._dims = None
         self._rhomin = None
         self._rhomax = None
@@ -65,6 +66,7 @@ class Config:
             self._write_data_name = None
         self._read_data_name = data["interface"]["read_data_name"]
 
+        self._meshtype = data["mesh_parameters"]["type"]
         self._dims = data["mesh_parameters"]["dimensions"]
         self._rhomin = data["mesh_parameters"]["rhopol_min"]
         self._rhomax = data["mesh_parameters"]["rhopol_max"]
@@ -97,6 +99,9 @@ class Config:
 
     def get_write_data_name(self):
         return self._write_data_name
+
+    def get_mesh_type(self):
+        return self._meshtype
 
     def get_dims(self):
         return self._dims

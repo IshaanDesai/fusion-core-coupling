@@ -7,8 +7,10 @@ cimport numpy as np
 cimport cython
 from diffusion_core.modules.output import write_vtk, write_csv, write_custom_csv
 from diffusion_core.modules.config import Config
+from diffusion_core.modules.mesh import Mesh
+from diffusion_core.modules.boundary import Boundary
 import math
-import time
+from time import process_time
 import logging
 import netCDF4 as nc
 import precice
@@ -29,6 +31,8 @@ class Diffusion:
         self._vertex_ids = None
 
     def solve_diffusion(self):
+        start_time = process_time()
+
         self.logger.info('Solving Diffusion case')
         # Read initial conditions from a JSON config file
         problem_config_file = "diffusion-coupling-config.json"
@@ -37,32 +41,24 @@ class Diffusion:
         # Iterators
         cdef Py_ssize_t i, j
 
-        # Read metric coefficient NetCDF file
-        ds = nc.Dataset('./polars.nc')
-
         # Mesh setup
-        nrho, ntheta = ds.dimensions['nrho'].size, ds.dimensions['ntheta'].size
-        assert nrho == config.get_rho_points()
-        assert ntheta == config.get_theta_points()
+        mesh = None
+        if config.get_mesh_type() == "CERFONS":
+            mesh = Mesh(config, './cerfons_geom_data.nc')
+        elif config.get_mesh_type() == "CIRCULAR":
+            mesh = Mesh(config, './circular_geom_data.nc')
 
-        # Get geometrical variables from NetCDF file
-        rho_np, theta_np = np.array(ds['rho'][:]), np.array(ds['theta'][:])
-        cdef double [::1] rho = rho_np
-        cdef double [::1] theta = theta_np
-        xpol_np, ypol_np = np.array(ds['xpol'][:]), np.array(ds['ypol'][:])
-        cdef double [:, ::1] xpol = xpol_np
-        cdef double [:, ::1] ypol = ypol_np
-
-        # Get Jacobian from NetCDF file
-        jac_np = np.array(ds['jacobian'][:])
-        cdef double [:, ::1] jac = jac_np
-
-        # Get metric coefficients from NetCDF file
-        g_rr_np, g_rt_np = np.array(ds['g_rhorho'][:]), np.array(ds['g_rhotheta'][:])
-        cdef double [:, ::1] g_rr = g_rr_np
-        cdef double [:, ::1] g_rt = g_rt_np
-        g_tt_np = np.array(ds['g_thetatheta'][:])
-        cdef double [:, ::1]  g_tt = g_tt_np
+        cdef double drho = mesh.get_drho()
+        cdef double dtheta = mesh.get_dtheta()
+        nrho, ntheta = mesh.get_nrho(), mesh.get_ntheta()
+        cdef double [::1] rho = mesh.get_rho_vals()
+        cdef double [::1] theta = mesh.get_theta_vals()
+        cdef double [:, ::1] xpol = mesh.get_x_vals()
+        cdef double [:, ::1] ypol = mesh.get_y_vals()
+        cdef double [:, ::1] jac = mesh.get_jacobian()
+        cdef double [:, ::1] g_rr = mesh.get_g_rho_rho()
+        cdef double [:, ::1] g_rt = mesh.get_g_rho_theta()
+        cdef double [:, ::1]  g_tt = mesh.get_g_theta_theta()
 
         # Field variable array
         u_np = np.zeros((ntheta, nrho), dtype=np.double)
@@ -82,17 +78,15 @@ class Diffusion:
                 gaussy = math.exp(-(y-yb)*(y-yb) / (wyb*wyb))
                 u[i, j] = gaussx*gaussy
 
-        # Set boundary conditions for inner edge (Dirichlet Zero)
+        # Set boundary conditions (Dirichlet)
         for i in range(ntheta):
             for j in range(nrho):
-                if j == 0:
+                if j == 0 or j == nrho-1:
                     u[i, j] = 0.0
 
-        # Set boundary conditions for outer edge (Neumann Zero) # THIS IMPLEMENTATION IS WRONG
-        for i in range(ntheta):
-            for j in range(nrho):
-                if j == nrho-1:
-                    u[i, j] = u[i, j-1]
+        # Set boundary conditions
+        flux_vals = np.full((ntheta))
+        boundary = Boundary(config, mesh, flux_vals, u)
 
         # Setup coupling mesh
         vertices = []
@@ -118,9 +112,6 @@ class Diffusion:
         self.logger.info('dt = %f', dt)
         t_total, t_out = config.get_total_time(), config.get_t_output()
 
-        cdef double drho = ds.getncattr('drho')
-        cdef double dtheta = ds.getncattr('dtheta')
-
         # Check the CFL Condition for Diffusion Equation
         cfl_rho = dt * diffc / (drho * drho)
         self.logger.info('CFL Coefficient with radial param = %f. Must be less than 0.5', cfl_rho)
@@ -138,8 +129,8 @@ class Diffusion:
         print("n_t = {}, n_out = {}".format(n_t, n_out))
 
         # Write initial state
-        write_csv(u, xpol, ypol, 0)
-        write_vtk(u, xpol, ypol, 0)
+        write_csv(u, mesh, 0)
+        write_vtk(u, mesh, 0)
 
         # Time loop
         cdef double u_sum
@@ -147,6 +138,10 @@ class Diffusion:
         cdef int n = 0
         cdef double t = 0.0
         while self._interface.is_coupling_ongoing():
+            # Read data from preCICE and set fluxes
+            flux_vals = self._interface.read_block_vector_data(self._read_data_id, self._vertex_ids)
+            boundary.set_bnd_vals(u, flux_vals)
+
             # Update time step
             dt = min(precice_dt, dt)
 
@@ -194,19 +189,9 @@ class Diffusion:
                 for j in range(nrho):
                     u[i, j] += dt*diffc*du[i, j] / jac[i, j]
 
-            # Update boundary conditions for outer edge (Neumann Zero) # THIS IMPLEMENTATION IS WRONG
-            for i in range(ntheta):
-                for j in range(nrho):
-                    if j == nrho-1:
-                        u[i, j] = u[i, j-1]
-
             # Write data to coupling interface preCICE
-            scalar_vals = []
-            for i in range(ntheta):
-                for j in range(nrho):
-                    if j == nrho-1:
-                        scalar_vals.append(u[i, j])
-            self._interface.write_block_scalar_data(self._write_data_id, self._write_vertex_ids, np.array(scalar_vals))
+            node_vals = boundary.get_bnd_vals(u)
+            self._interface.write_block_scalar_data(self._write_data_id, self._write_vertex_ids, node_vals)
 
             # Advance coupling via preCICE
             precice_dt = self._interface.advance(dt)
@@ -216,8 +201,8 @@ class Diffusion:
             t += dt
 
             if n%n_out == 0 or n == n_t-1:
-                write_csv(u, xpol, ypol, n+1)
-                write_vtk(u, xpol, ypol, n+1)
+                write_csv(u, mesh, n+1)
+                write_vtk(u, mesh, n+1)
                 self.logger.info('VTK file output written at t = %f', n*dt)
                 u_sum = 0
                 for i in range(ntheta):
@@ -225,8 +210,8 @@ class Diffusion:
                         u_sum += u[i, j]
 
                 self.logger.info("Elapsed time = {}  || Field sum = {}".format(n*dt, u_sum/(nrho*ntheta)))
-                self.logger.info("Elapsed CPU time = {}".format(time.clock()))
+                self.logger.info("Elapsed CPU time = {}".format(process_time() - start_time))
 
         self._interface.finalize()
-        self.logger.info("Total CPU time = {}".format(time.clock()))
-        # End
+        self.logger.info("Total CPU time = {}".format(process_time() - start_time))
+
