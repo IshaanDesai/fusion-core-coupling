@@ -44,9 +44,9 @@ class Diffusion:
         # Mesh setup
         mesh = None
         if config.get_mesh_type() == "CERFONS":
-            mesh = Mesh(config, './cerfons_geom_data.nc')
+            mesh = Mesh(config, "/u/idesai/fusion-core-coupling/cerfons_geom_data.nc")
         elif config.get_mesh_type() == "CIRCULAR":
-            mesh = Mesh(config, './circular_geom_data.nc')
+            mesh = Mesh(config, "/u/idesai/fusion-core-coupling/circular_geom_data.nc")
 
         cdef double drho = mesh.get_drho()
         cdef double dtheta = mesh.get_dtheta()
@@ -63,7 +63,7 @@ class Diffusion:
         # Field variable array
         u_np = np.zeros((ntheta, nrho), dtype=np.double)
         cdef double [:, ::1] u = u_np
-        # Field delta change array
+        # Field explicit update array
         du_np = np.zeros((ntheta, nrho), dtype=np.double)
         cdef double [:, ::1] du = du_np
 
@@ -85,24 +85,34 @@ class Diffusion:
                     u[i, j] = 0.0
 
         # Set boundary conditions
-        flux_vals = np.full((ntheta))
+        flux_vals = np.full((ntheta), 0.0)
         boundary = Boundary(config, mesh, flux_vals, u)
 
-        # Setup coupling mesh
+        # Setup read coupling mesh
         vertices = []
         for i in range(ntheta):
-            for j in range(nrho):
-                if j == nrho-1:
-                    vertices.append([xpol[i, j], ypol[i, j]])
+            vertices.append([xpol[i, nrho-3], ypol[i, nrho-3]])
 
-        self._coupling_write_mesh_vertices = np.array(vertices)
-        write_custom_csv(vertices)
+        self._read_vertex_ids = self._interface.set_mesh_vertices(self._interface.get_mesh_id(
+            self._config.get_read_mesh_name()), vertices)
+
+        # Set up read mesh in preCICE
+        self._read_mesh_id = self._interface.get_mesh_id(self._config.get_read_mesh_name())
+        self._read_data_id = self._interface.get_data_id(self._config.get_read_data_name(), self._read_mesh_id)
+
+        # Clear vertices list for reuse
+        vertices.clear()
+
+        # Setup write coupling mesh
+        vertices = []
+        for i in range(ntheta):
+            vertices.append([xpol[i, nrho-1], ypol[i, nrho-1]])
 
         self._write_vertex_ids = self._interface.set_mesh_vertices(self._interface.get_mesh_id(
-            self._config.get_coupling_mesh_name()), self._coupling_write_mesh_vertices)
+            self._config.get_write_mesh_name()), vertices)
 
         # Set up write mesh in preCICE
-        self._write_mesh_id = self._interface.get_mesh_id(self._config.get_coupling_mesh_name())
+        self._write_mesh_id = self._interface.get_mesh_id(self._config.get_write_mesh_name())
         self._write_data_id = self._interface.get_data_id(self._config.get_write_data_name(), self._write_mesh_id)
 
         # Get parameters from config and mesh modules
@@ -139,7 +149,7 @@ class Diffusion:
         cdef double t = 0.0
         while self._interface.is_coupling_ongoing():
             # Read data from preCICE and set fluxes
-            flux_vals = self._interface.read_block_vector_data(self._read_data_id, self._vertex_ids)
+            flux_vals = self._interface.read_block_vector_data(self._read_data_id, self._read_vertex_ids)
             boundary.set_bnd_vals(u, flux_vals)
 
             # Update time step
@@ -214,4 +224,3 @@ class Diffusion:
 
         self._interface.finalize()
         self.logger.info("Total CPU time = {}".format(process_time() - start_time))
-

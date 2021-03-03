@@ -9,25 +9,40 @@
   <solver-interface dimensions="2">
     
     <data:scalar name="value"/>
+    <data:vector name="flux"/>
 
-    <mesh name="core_mesh">
+    <mesh name="core_read_mesh">
+       <use-data name="flux"/>
+    </mesh>
+
+    <mesh name="core_write_mesh">
        <use-data name="value"/>
     </mesh>
 
-    <mesh name="edge_mesh">
+    <mesh name="edge_cart">
        <use-data name="value"/>
+    </mesh>
+
+    <mesh name="edge_polar">
+       <use-data name="flux"/>
     </mesh>
     
     <participant name="Core">
-      <use-mesh name="core_mesh" provide="yes"/>
-      <use-mesh name="edge_mesh" from="Edge"/>
-      <write-data name="value" mesh="core_mesh"/>
-      <mapping:rbf-thin-plate-splines direction="write" from="core_mesh" to="edge_mesh" constraint="consistent"/>
+      <use-mesh name="core_read_mesh" provide="yes"/>
+      <use-mesh name="core_write_mesh" provide="yes"/>
+      <use-mesh name="edge_cart" from="Edge"/>
+      <use-mesh name="edge_polar" from="Edge"/>
+      <write-data name="value" mesh="core_write_mesh"/>
+      <read-data name="flux" mesh="core_read_mesh"/>
+      <mapping:rbf-thin-plate-splines direction="write" from="core_write_mesh" to="edge_cart" constraint="consistent"/>
+      <mapping:nearest-neighbor direction="read" from="edge_polar" to="core_read_mesh" constraint="consistent"/>
     </participant>
     
     <participant name="Edge">		
-      <use-mesh name="edge_mesh" provide="yes"/>
-      <read-data name="value" mesh="edge_mesh"/>
+      <use-mesh name="edge_cart" provide="yes"/>
+      <use-mesh name="edge_polar" provide="yes"/>
+      <read-data name="value" mesh="edge_cart"/>
+      <read-data name="flux" mesh="edge_polar"/>
     </participant>
 
     <m2n:sockets from="Core" to="Edge" network="ib0"/>
@@ -36,7 +51,8 @@
        <participants first="Core" second="Edge"/>
        <max-time value="0.5"/>
        <time-window-size value="2e-6"/>
-       <exchange data="value" mesh="edge_mesh" from="Core" to="Edge"/>
+       <exchange data="value" mesh="edge_cart" from="Core" to="Edge"/>
+       <exchange data="flux" mesh="edge_polar" from="Edge" to="Core"/>
     </coupling-scheme:serial-explicit>
 
   </solver-interface>

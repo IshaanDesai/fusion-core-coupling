@@ -10,8 +10,6 @@ class Mesh:
         ds = nc.Dataset(filename)
         self._drho, self._dtheta = ds.getncattr('drho'), ds.getncattr('dtheta')
         self._nrho, self._ntheta = ds.dimensions['nrho'].size, ds.dimensions['ntheta'].size
-        assert self._nrho == config.get_rho_points()
-        assert self._ntheta == config.get_theta_points()
 
         self._rho, self._theta = np.array(ds['rho'][:]), np.array(ds['theta'][:])
         self._x, self._y = np.array(ds['xpol'][:]), np.array(ds['ypol'][:])

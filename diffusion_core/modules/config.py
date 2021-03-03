@@ -22,16 +22,12 @@ class Config:
 
         self._config_file_name = None
         self._participant_name = None
-        self._coupling_mesh_name = None
+        self._read_mesh_name = None
+        self._write_mesh_name = None
         self._read_data_name = None
         self._write_data_name = None
 
         self._meshtype = None
-        self._dims = None
-        self._rhomin = None
-        self._rhomax = None
-        self._rho_points = None
-        self._theta_points = None
 
         self._diffc = None
         self._dt = None
@@ -59,19 +55,12 @@ class Config:
         data = json.load(read_file)
         self._config_file_name = os.path.join(folder, data["config_file_name"])
         self._participant_name = data["participant_name"]
-        self._coupling_mesh_name = data["interface"]["coupling_mesh_name"]
-        try:
-            self._write_data_name = data["interface"]["write_data_name"]
-        except:
-            self._write_data_name = None
+        self._read_mesh_name = data["interface"]["read_mesh_name"]
+        self._write_mesh_name = data["interface"]["write_mesh_name"]
+        self._write_data_name = data["interface"]["write_data_name"]
         self._read_data_name = data["interface"]["read_data_name"]
 
         self._meshtype = data["mesh_parameters"]["type"]
-        self._dims = data["mesh_parameters"]["dimensions"]
-        self._rhomin = data["mesh_parameters"]["rhopol_min"]
-        self._rhomax = data["mesh_parameters"]["rhopol_max"]
-        self._rho_points = data["mesh_parameters"]["rho_points"]
-        self._theta_points = data["mesh_parameters"]["theta_points"]
 
         self._diffc = data["diffusion_parameters"]["diff_coeff"]
         self._dt = data["simulation_parameters"]["timestep"]
@@ -91,8 +80,11 @@ class Config:
     def get_participant_name(self):
         return self._participant_name
 
-    def get_coupling_mesh_name(self):
-        return self._coupling_mesh_name
+    def get_read_mesh_name(self):
+        return self._read_mesh_name
+
+    def get_write_mesh_name(self):
+        return self._write_mesh_name
 
     def get_read_data_name(self):
         return self._read_data_name
@@ -102,21 +94,6 @@ class Config:
 
     def get_mesh_type(self):
         return self._meshtype
-
-    def get_dims(self):
-        return self._dims
-
-    def get_rhomin(self):
-        return self._rhomin
-
-    def get_rhomax(self):
-        return self._rhomax
-
-    def get_rho_points(self):
-        return self._rho_points
-
-    def get_theta_points(self):
-        return self._theta_points
 
     def get_diffusion_coeff(self):
         return self._diffc
@@ -135,4 +112,3 @@ class Config:
 
     def get_wxb_wyb(self):
         return self._wxb, self._wyb
-

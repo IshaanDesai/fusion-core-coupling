@@ -24,8 +24,6 @@ class Boundary:
     def __init__(self, config, mesh, data_neumann, field):
         self._nrho = mesh.get_nrho()
         self._ntheta = mesh.get_ntheta()
-        self._rhomin = config.get_rhomin()
-        self._rhomax = config.get_rhomax()
         self._drho = mesh.get_drho()
         self._dtheta = mesh.get_dtheta()
         self._g_rr = mesh.get_g_rho_rho()
@@ -60,24 +58,3 @@ class Boundary:
                     bnd_data.append(field[i, j])
 
         return np.array(bnd_data)
-
-    def set_bnd_vals_mms(self, field, t):
-        """
-        gradient(f)_{r} = (2*pi/(rmax - rmin))*cos(2*pi*(r - rmin)/(rmax - rmin))*cos(t)*cos(theta)
-        """
-        counter = 0
-        if self._bnd_type == BoundaryType.DIRICHLET:
-            for inds in self._bnd_inds:
-                # Zero value selected for Dirichlet boundary condition for MMS analysis
-                field[inds[0], inds[1]] = 0.0
-                counter += 1
-        elif self._bnd_type == BoundaryType.NEUMANN_SO:
-            for inds in self._bnd_inds:
-                # Modify boundary value by evaluation of gradient of ansatz
-                a = 2 * math.pi * (self._r[counter] - self._rmin) / (self._rmax - self._rmin)
-                b = 2 * math.pi / (self._rmax - self._rmin)
-                # NOTE: This implementation is only valid for Wall boundary cells (outer most cells)
-                flux = b * math.cos(a) * math.cos(t) * math.cos(self._theta[counter])
-                # Modify boundary value by second order evaluation of gradient
-                field[inds[0], inds[1]] = (4/3)*field[inds[0]-1, inds[1]] - (1/3)*field[inds[0]-2, inds[1]] + (2/3)*self._dr*flux
-                counter += 1

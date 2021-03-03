@@ -2,17 +2,13 @@
   "participant_name": "Core",
   "config_file_name": "precice-config-div.xml",
   "interface": {
-      "coupling_mesh_name": "core_mesh",
-      "write_data_name": "value",
-      "read_data_name": "Temperature"
+      "read_mesh_name": "core_read_mesh",
+      "write_mesh_name": "core_write_mesh",
+      "read_data_name": "flux",
+      "write_data_name": "value"
     },
   "mesh_parameters": {
-      "type": "CIRCULAR",
-      "dimensions": 2,
-      "rhopol_min": 0.4,
-      "rhopol_max": 0.8,
-      "rho_points": 100,
-      "theta_points": 400
+      "type": "CERFONS"
   },
   "diffusion_parameters": {
     "diff_coeff": 0.01
