@@ -4,8 +4,6 @@ The main purpose of this code is to couple the core region of a fusion reactor w
 
 This code was initially developed as part of a [Master thesis by Ishaan Desai](https://mediatum.ub.tum.de/604993?query=desai&show_id=1580087)[2] done jointly with the Max Planck Insitute of Plasma Physics and the Chair of Scientific Computing in Computer Science at Technical University of Munich. Current development is done as a joint collaboration between the [Tokamak Theory Division](https://www.ipp.mpg.de/ippcms/eng/for/bereiche/tokamak) at the Max Planck Institute of Plasma Physics and the [Department of Usability and Sustainability of Simulation Software](https://www.ipvs.uni-stuttgart.de/departments/us3/) at the University of Stuttgart.
 
-Contact: Ishaan Desai (*ishaan.desai@ipvs.uni-stuttgart.de*)
-
 ## Compile Cython code
 Only the following branches can be run as stand-alone single physics simulations: [master](https://github.com/IshaanDesai/fusion-core-coupling), [diverted-diffusion](https://github.com/IshaanDesai/fusion-core-coupling/tree/diverted_diffusion). The other branches are developed for coupling purposes and require several dependencies to be installed before being able to use in a coupled simulation.
 
