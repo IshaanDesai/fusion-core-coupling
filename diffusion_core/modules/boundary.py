@@ -35,26 +35,20 @@ class Boundary:
 
         self.set_bnd_vals(field, data_neumann)
 
-    def set_bnd_vals(self, field, data_neumann):
-        counter = 0
-        for i in range(self._nrho):
-            for j in range(self._ntheta):
-                if j == 0:
-                    # Dirichlet condition at inner boundary
-                    field[i, j] = 0.0
-                elif j == self._nrho - 1:
-                    flux = data_neumann[counter]
-                    # Neumann condition at outer boundary (1st Order)
-                    field[i, j] = self._drho*flux / math.sqrt(self._g_rr[i, j]) + field[i-1, j] + \
-                                  (self._g_rt[i, j]*self._drho)*(field[i-1, j-1] - field[i-1, j]) / (self._g_rr[i, j]*self._dtheta)
-                    counter += 1
+    def set_bnd_vals(self, field, flux):
+        j = self._nrho - 1
+        for i in range(self._ntheta):
+            # Dirichlet condition at inner boundary
+            field[i, 0] = 0.0
+            # Neumann condition at outer boundary (1st Order)
+            field[i, j] = self._drho*flux[i] / math.sqrt(self._g_rr[i, j]) + field[i-1, j] + (self._g_rt[i, j]*self._drho)*(field[i-1, j-1] - field[i-1, j]) / (self._g_rr[i, j]*self._dtheta)
 
     def get_bnd_vals(self, field):
         bnd_data = []
+        # Write data from the interior of the domain (2 mesh widths inside the physical boundary)
+        j = self._nrho - 3
         # Gets Dirichlet values and returns them for coupling
-        for i in range(self._nrho):
-            for j in range(self._ntheta):
-                if j == self._nrho - 1:
-                    bnd_data.append(field[i, j])
-
+        for i in range(self._ntheta):
+            bnd_data.append(field[i, j])
+        
         return np.array(bnd_data)

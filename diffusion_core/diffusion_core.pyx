@@ -85,13 +85,13 @@ class Diffusion:
                     u[i, j] = 0.0
 
         # Set boundary conditions
-        flux_vals = np.full((ntheta), 0.0)
+        flux_vals = np.zeros((ntheta))
         boundary = Boundary(config, mesh, flux_vals, u)
 
         # Setup read coupling mesh
         vertices = []
         for i in range(ntheta):
-            vertices.append([xpol[i, nrho-3], ypol[i, nrho-3]])
+            vertices.append([xpol[i, nrho-1], ypol[i, nrho-1]])
 
         self._read_vertex_ids = self._interface.set_mesh_vertices(self._interface.get_mesh_id(
             self._config.get_read_mesh_name()), vertices)
@@ -100,13 +100,10 @@ class Diffusion:
         self._read_mesh_id = self._interface.get_mesh_id(self._config.get_read_mesh_name())
         self._read_data_id = self._interface.get_data_id(self._config.get_read_data_name(), self._read_mesh_id)
 
-        # Clear vertices list for reuse
-        vertices.clear()
-
         # Setup write coupling mesh
         vertices = []
         for i in range(ntheta):
-            vertices.append([xpol[i, nrho-1], ypol[i, nrho-1]])
+            vertices.append([xpol[i, nrho-3], ypol[i, nrho-3]])
 
         self._write_vertex_ids = self._interface.set_mesh_vertices(self._interface.get_mesh_id(
             self._config.get_write_mesh_name()), vertices)
@@ -149,7 +146,7 @@ class Diffusion:
         cdef double t = 0.0
         while self._interface.is_coupling_ongoing():
             # Read data from preCICE and set fluxes
-            flux_vals = self._interface.read_block_vector_data(self._read_data_id, self._read_vertex_ids)
+            flux_vals = self._interface.read_block_scalar_data(self._read_data_id, self._read_vertex_ids)
             boundary.set_bnd_vals(u, flux_vals)
 
             # Update time step

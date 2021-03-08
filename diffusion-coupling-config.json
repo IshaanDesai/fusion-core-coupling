@@ -14,9 +14,9 @@
     "diff_coeff": 0.01
   },
   "simulation_parameters": {
-      "total_time": 0.5,
-      "timestep": 2.0E-6,
-      "t_output": 0.05
+      "total_time": 0.01,
+      "timestep": 1.0E-4,
+      "t_output": 0.001
   },
   "init_conditions": {
       "xb": 0.9,

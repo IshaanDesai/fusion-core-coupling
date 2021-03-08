@@ -9,7 +9,7 @@
   <solver-interface dimensions="2">
     
     <data:scalar name="value"/>
-    <data:vector name="flux"/>
+    <data:scalar name="flux"/>
 
     <mesh name="core_read_mesh">
        <use-data name="flux"/>
@@ -42,15 +42,15 @@
       <use-mesh name="edge_cart" provide="yes"/>
       <use-mesh name="edge_polar" provide="yes"/>
       <read-data name="value" mesh="edge_cart"/>
-      <read-data name="flux" mesh="edge_polar"/>
+      <write-data name="flux" mesh="edge_polar"/>
     </participant>
 
     <m2n:sockets from="Core" to="Edge" network="ib0"/>
 
     <coupling-scheme:serial-explicit>
        <participants first="Core" second="Edge"/>
-       <max-time value="0.5"/>
-       <time-window-size value="2e-6"/>
+       <max-time value="0.01"/>
+       <time-window-size value="1e-4"/>
        <exchange data="value" mesh="edge_cart" from="Core" to="Edge"/>
        <exchange data="flux" mesh="edge_polar" from="Edge" to="Core"/>
     </coupling-scheme:serial-explicit>
