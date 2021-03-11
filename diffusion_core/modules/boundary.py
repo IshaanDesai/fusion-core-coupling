@@ -41,7 +41,7 @@ class Boundary:
             # Dirichlet condition at inner boundary
             field[i, 0] = 0.0
             # Neumann condition at outer boundary (1st Order)
-            field[i, j] = self._drho*flux[i] / math.sqrt(self._g_rr[i, j]) + field[i-1, j] + (self._g_rt[i, j]*self._drho)*(field[i-1, j-1] - field[i-1, j]) / (self._g_rr[i, j]*self._dtheta)
+            field[i, j] = self._drho*flux[i] / math.sqrt(self._g_rr[i, j]) + field[i, j-1] + (self._g_rt[i, j]*self._drho)*(field[i-1, j-1] - field[i, j-1]) / (self._g_rr[i, j]*self._dtheta)
 
     def get_bnd_vals(self, field):
         bnd_data = []

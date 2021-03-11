@@ -49,7 +49,7 @@
 
     <coupling-scheme:serial-explicit>
        <participants first="Core" second="Edge"/>
-       <max-time value="0.01"/>
+       <max-time value="1.0"/>
        <time-window-size value="1e-4"/>
        <exchange data="value" mesh="edge_cart" from="Core" to="Edge"/>
        <exchange data="flux" mesh="edge_polar" from="Edge" to="Core"/>
