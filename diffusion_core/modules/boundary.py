@@ -30,18 +30,23 @@ class Boundary:
         self._g_rt = mesh.get_g_rho_theta()
         self._g_tt = mesh.get_g_theta_theta()
 
-        self._bnd_inds = []
-        self._r, self._x, self._y, self._theta = [], [], [], []
-
         self.set_bnd_vals(field, data_neumann)
 
-    def set_bnd_vals(self, field, flux):
+    def set_bnd_vals_fo(self, field, flux):
         j = self._nrho - 1
         for i in range(self._ntheta):
             # Dirichlet condition at inner boundary
             field[i, 0] = 0.0
             # Neumann condition at outer boundary (1st Order)
             field[i, j] = self._drho*flux[i] / math.sqrt(self._g_rr[i, j]) + field[i, j-1] + (self._g_rt[i, j]*self._drho)*(field[i-1, j-1] - field[i, j-1]) / (self._g_rr[i, j]*self._dtheta)
+
+    def set_bnd_vals_so(self, field, flux):
+        j = self._nrho - 1
+        for i in range(self._ntheta):
+            # Dirichlet condition at inner boundary
+            field[i, 0] = 0.0
+            # Neumann condition at outer boundary (2nd order)
+            field[i, j] = 4*field[i, j-1]/3 - field[i, j-2]/3 - (self._drho*self._g_rt[i, j])/(3*self._dtheta*self._g_rr[i, j])*(2*field[i-1, j-1] - 2*field[i+1, j-1] + field[i+1, j-2] - field[i-1,j-2]) + (2*self._drho)/(3*math.sqrt(self._g_rr[i, j]))*(flux[i])
 
     def get_bnd_vals(self, field):
         bnd_data = []
@@ -52,3 +57,6 @@ class Boundary:
             bnd_data.append(field[i, j])
         
         return np.array(bnd_data)
+
+    def _get_coeffs_soNeumann(self):
+

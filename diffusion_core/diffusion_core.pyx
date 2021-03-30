@@ -147,7 +147,7 @@ class Diffusion:
         while self._interface.is_coupling_ongoing():
             # Read data from preCICE and set fluxes
             flux_vals = self._interface.read_block_scalar_data(self._read_data_id, self._read_vertex_ids)
-            boundary.set_bnd_vals(u, flux_vals)
+            boundary.set_bnd_vals_so(u, flux_vals)
 
             # Update time step
             dt = min(precice_dt, dt)
