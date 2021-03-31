@@ -35,7 +35,7 @@ class Diffusion:
         rmin, rmax = config.get_rmin(), config.get_rmax()
 
         # Create MMS module object
-        ansol_bessel = Ansol()
+        ansol_bessel = Ansol(config)
 
         # Field variable array
         u_np = np.zeros((nr, ntheta), dtype=np.double)
@@ -143,9 +143,9 @@ class Diffusion:
                 for j in range(ntheta):
                     u[i, j] += dt*diffc_perp*du_perp[i, j]
 
-            # Set Neumann boundary conditions in each iteration
-            bnd_wall.set_bnd_vals_ansol(ansol_bessel, u, n*dt)
-            bnd_core.set_bnd_vals_ansol(ansol_bessel, u, n*dt)
+            # Set analytical boundary conditions in each iteration
+            bnd_wall.set_bnd_vals_ansol(ansol_bessel, u, (n+1)*dt)
+            bnd_core.set_bnd_vals_ansol(ansol_bessel, u, (n+1)*dt)
 
             if n%n_out == 0 or n == n_t-1:
                 write_csv(u, mesh, n+1)
@@ -159,7 +159,7 @@ class Diffusion:
                 self.logger.info("Elapsed time = {}  || Field sum = {}".format(n*dt, u_sum/(nr*ntheta)))
                 self.logger.info("Elapsed CPU time = {}".format(time.process_time()))
 
-        ansol_bessel.compare_ansoln(mesh, u, n*dt)
+                ansol_bessel.compare_ansoln(mesh, u, n*dt, self.logger)
 
         self.logger.info("Total CPU time = {}".format(time.process_time()))
         # End

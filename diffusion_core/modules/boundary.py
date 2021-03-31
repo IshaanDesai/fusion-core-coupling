@@ -37,32 +37,28 @@ class Boundary:
                 point_type = mesh.get_point_type(i, j)
                 if point_type == self._layer_type:
                     mesh_ind = mesh.get_index_from_i_j(i, j)
-                    r = mesh.get_r(mesh_ind)
-                    x = mesh.get_x(mesh_ind)
-                    y = mesh.get_y(mesh_ind)
-                    theta = mesh.get_theta(mesh_ind)
+                    self._r.append(mesh.get_r(mesh_ind))
+                    self._x.append(mesh.get_x(mesh_ind))
+                    self._y.append(mesh.get_y(mesh_ind))
+                    self._theta.append(mesh.get_theta(mesh_ind))
                     self._bnd_inds.append([i, j])
                     if self._bnd_type == BoundaryType.DIRICHLET:
                         field[i, j] = data[counter]
                         counter += 1
                     elif self._bnd_type == BoundaryType.NEUMANN_FO:
                         # Calculate flux from components
-                        flux = data[counter, 0] * (x/r) + data[counter, 1] * (y/r)
+                        flux = data[counter, 0] * (self._x[counter]/self._r[counter]) + data[counter, 1] * (self._y[counter]/self._r[counter])
                         # Modify boundary value by first order evaluation of gradient
                         field[i, j] = field[i-1, j] + flux*self._dr
                         counter += 1
                     elif self._bnd_type == BoundaryType.NEUMANN_SO:
                         # Calculate flux from components
-                        flux = data[counter, 0] * (x/r) + data[counter, 1] * (y/r)
+                        flux = data[counter, 0] * (self._x[counter]/self._r[counter]) + data[counter, 1] * (self._y[counter]/self._r[counter])
                         # Modify boundary value by second order evaluation of gradient
                         field[i, j] = (4/3)*field[i-1, j] - (1/3)*field[i-2, j] + (2/3)*self._dr*flux
                         counter += 1
                     else:
                         raise Exception("Invalid boundary type provided.")
-                    self._r.append(r)
-                    self._x.append(x)
-                    self._y.append(y)
-                    self._theta.append(theta)
 
     def set_bnd_vals(self, field, data):
         counter = 0
