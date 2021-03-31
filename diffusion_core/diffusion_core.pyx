@@ -1,5 +1,6 @@
 """
-Code to simulate diffusion in a polar coordinate system replicating a gyrokinetics fusion code (reactor core physics)
+Code to simulate diffusion in a polar coordinate system replicating a gyrokinetics fusion code (reactor core physics).
+Verification with analytical solution obtained using Bessel functions of the first kind
 """
 
 import numpy as np
@@ -9,7 +10,7 @@ from diffusion_core.modules.mesh_2d import Mesh, MeshVertexType
 from diffusion_core.modules.output import write_vtk, write_csv
 from diffusion_core.modules.config import Config
 from diffusion_core.modules.boundary import Boundary, BoundaryType
-from diffusion_core.modules.mms cimport MMS
+from diffusion_core.modules.ansol import Ansol
 import math
 import time
 import logging
@@ -34,7 +35,7 @@ class Diffusion:
         rmin, rmax = config.get_rmin(), config.get_rmax()
 
         # Create MMS module object
-        mms = MMS(config, mesh)
+        ansol_bessel = Ansol()
 
         # Field variable array
         u_np = np.zeros((nr, ntheta), dtype=np.double)
@@ -43,14 +44,14 @@ class Diffusion:
         du_perp_np = np.zeros((nr, ntheta), dtype=np.double)
         cdef double [:, ::1] du_perp = du_perp_np
 
-        # Initializing custom initial state (sinosoidal)
+        # Setting initial state of the field using analytical solution formulation
         for l in range(mesh.get_n_points_grid()):
             mesh_ind = mesh.grid_to_mesh_index(l)
             radialp = mesh.get_r(mesh_ind)
             thetap = mesh.get_theta(mesh_ind)
 
             i, j = mesh.get_i_j_from_index(mesh_ind)
-            u[i, j] = mms.init_mms(radialp, thetap)
+            u[i, j] = ansol_bessel.ansol(radialp, thetap, 0)
 
         # Initialize boundary conditions at inner and outer edge of the torus
         bndvals_wall = np.zeros((mesh.get_n_points_wall()))
@@ -58,9 +59,9 @@ class Diffusion:
         bndvals_core = np.zeros((mesh.get_n_points_core()))
         bnd_core = Boundary(config, mesh, bndvals_core, u, BoundaryType.DIRICHLET, MeshVertexType.BC_CORE)
 
-        # Reset boundary conditions according to MMS ansatz
-        bnd_wall.set_bnd_vals_mms(u, 0)
-        bnd_core.set_bnd_vals_mms(u, 0)
+        # Reset boundary conditions according to analytical solution
+        bnd_wall.set_bnd_vals_ansol(ansol_bessel, u, 0)
+        bnd_core.set_bnd_vals_ansol(ansol_bessel, u, 0)
 
         # Get parameters from config and mesh modules
         diffc_perp = config.get_diffusion_coeff()
@@ -143,8 +144,8 @@ class Diffusion:
                     u[i, j] += dt*diffc_perp*du_perp[i, j]
 
             # Set Neumann boundary conditions in each iteration
-            bnd_wall.set_bnd_vals_mms(u, n*dt)
-            bnd_core.set_bnd_vals_mms(u, n*dt)
+            bnd_wall.set_bnd_vals_ansol(ansol_bessel, u, n*dt)
+            bnd_core.set_bnd_vals_ansol(ansol_bessel, u, n*dt)
 
             if n%n_out == 0 or n == n_t-1:
                 write_csv(u, mesh, n+1)
@@ -156,7 +157,9 @@ class Diffusion:
                         u_sum += u[i, j]
 
                 self.logger.info("Elapsed time = {}  || Field sum = {}".format(n*dt, u_sum/(nr*ntheta)))
-                self.logger.info("Elapsed CPU time = {}".format(time.clock()))
+                self.logger.info("Elapsed CPU time = {}".format(time.process_time()))
 
-        self.logger.info("Total CPU time = {}".format(time.clock()))
+        ansol_bessel.compare_ansoln(mesh, u, n*dt)
+
+        self.logger.info("Total CPU time = {}".format(time.process_time()))
         # End
