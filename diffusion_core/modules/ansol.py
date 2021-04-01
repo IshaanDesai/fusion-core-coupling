@@ -18,6 +18,10 @@ class Ansol:
     def ansol(self, r, theta, t):
         return math.sin(self._m*theta)*special.jv(self._m,self._ums*r)*math.exp(-self._diffc*math.pow(self._ums,2)*t)
 
+    def ansol_gradient(self, r, theta, t):
+        return math.sin(self._m*theta)*math.exp(-self._diffc*math.pow(self._ums,2)*t)*self._ums*(1/2) * \
+            (special.jv(self._m-1,self._ums*r) - special.jv(self._m+1,self._ums*r))
+
     def compare_ansoln(self, mesh, u, t, logger_ansoln):
         del2 = 0
         delinf = 0

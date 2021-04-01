@@ -117,9 +117,14 @@ class Boundary:
         """
         Assign the analytical solution according to the Bessel function at the inner and outer boundary
         """
-        assert self._bnd_type == BoundaryType.DIRICHLET
-
         counter = 0
-        for inds in self._bnd_inds:
-            field[inds[0], inds[1]] = ansol.ansol(self._r[counter], self._theta[counter], t)
-            counter += 1
+        if self._bnd_type == BoundaryType.DIRICHLET:
+            for inds in self._bnd_inds:
+                field[inds[0], inds[1]] = ansol.ansol(self._r[counter], self._theta[counter], t)
+                counter += 1
+        elif self._bnd_type == BoundaryType.NEUMANN_SO:
+            for inds in self._bnd_inds:
+                flux = ansol.ansol_gradient(self._r[counter], self._theta[counter], t)
+                # Modify boundary value by second order evaluation of gradient
+                field[inds[0], inds[1]] = (4/3)*field[inds[0]-1, inds[1]] - (1/3)*field[inds[0]-2, inds[1]] + (2/3)*self._dr*flux
+                counter += 1

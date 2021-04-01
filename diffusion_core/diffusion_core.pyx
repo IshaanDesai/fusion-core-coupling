@@ -54,8 +54,8 @@ class Diffusion:
             u[i, j] = ansol_bessel.ansol(radialp, thetap, 0)
 
         # Initialize boundary conditions at inner and outer edge of the torus
-        bndvals_wall = np.zeros((mesh.get_n_points_wall()))
-        bnd_wall = Boundary(config, mesh, bndvals_wall, u, BoundaryType.DIRICHLET, MeshVertexType.BC_WALL)
+        bndvals_wall = np.zeros((mesh.get_n_points_wall(), 2))
+        bnd_wall = Boundary(config, mesh, bndvals_wall, u, BoundaryType.NEUMANN_SO, MeshVertexType.BC_WALL)
         bndvals_core = np.zeros((mesh.get_n_points_core()))
         bnd_core = Boundary(config, mesh, bndvals_core, u, BoundaryType.DIRICHLET, MeshVertexType.BC_CORE)
 
