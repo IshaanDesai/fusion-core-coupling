@@ -15,6 +15,6 @@ module load anaconda/3/2019.03
 
 # Run both coupling jobs
 echo "Launching Polar Diffusion Code"
-srun python3 /draco/u/idesai/fusioncoupling-polar/main.py
+srun python3 /draco/u/idesai/fusion-core-coupling/main.py &> single-phy.log
 echo "Polar Diffusion Run completed"
 

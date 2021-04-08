@@ -12,7 +12,8 @@
       "r_inner": 0.2,
       "r_outer": 1.0,
       "radial_points": 200,
-      "circular_points": 800
+      "circular_points": 800,
+      "type": "CIRCULAR"
   },
   "diffusion_parameters": {
     "coeff_perp": 1.0
@@ -22,7 +23,6 @@
       "total_time": 0.015,
       "timestep": 2.5E-7,
       "t_output": 0.005,
-      "type": "CIRCULAR"
   },
   "init_conditions": {
       "xb": 0.9,
