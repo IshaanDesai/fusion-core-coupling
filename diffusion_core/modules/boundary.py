@@ -10,121 +10,73 @@ import enum
 import numpy as np
 import math
 
-
-class BoundaryType(enum.Enum):
-    """
-    Defines boundary types: DIRICHLET = Dirichlet, NEUMANN_FO, NEUMANN_SO = Neumann first and second order.
-    """
-    DIRICHLET = 247
-    NEUMANN_FO = 333
-    NEUMANN_SO = 453
-
-
 class Boundary:
-    def __init__(self, config, mesh, data, field, bnd_type, layer_type):
-        self._nr, self._ntheta = mesh.get_n_points_axiswise()
-        self._rmin, self._rmax = config.get_rmin(), config.get_rmax()
-        self._dr = mesh.get_r_spacing()
+    def __init__(self, config, mesh, data, field):
+        self._nrho = mesh.get_nrho()
+        self._ntheta = mesh.get_ntheta()
+        self._drho = mesh.get_drho()
+        self._dtheta = mesh.get_dtheta()
+        self._g_rr = mesh.get_g_rho_rho()
+        self._g_rt = mesh.get_g_rho_theta()
+        self._g_tt = mesh.get_g_theta_theta()
 
-        self._bnd_inds = []
-        self._r, self._x, self._y, self._theta = [], [], [], []
-        self._bnd_type = bnd_type
-        self._layer_type = layer_type
+        self._rho = mesh.get_rho_vals()
+        self._theta = mesh.get_theta_vals()
 
-        counter = 0
-        for i in range(self._nr):
-            for j in range(self._ntheta):
-                point_type = mesh.get_point_type(i, j)
-                if point_type == self._layer_type:
-                    mesh_ind = mesh.get_index_from_i_j(i, j)
-                    self._r.append(mesh.get_r(mesh_ind))
-                    self._x.append(mesh.get_x(mesh_ind))
-                    self._y.append(mesh.get_y(mesh_ind))
-                    self._theta.append(mesh.get_theta(mesh_ind))
-                    self._bnd_inds.append([i, j])
-                    if self._bnd_type == BoundaryType.DIRICHLET:
-                        field[i, j] = data[counter]
-                        counter += 1
-                    elif self._bnd_type == BoundaryType.NEUMANN_FO:
-                        # Calculate flux from components
-                        flux = data[counter, 0] * (self._x[counter]/self._r[counter]) + data[counter, 1] * (self._y[counter]/self._r[counter])
-                        # Modify boundary value by first order evaluation of gradient
-                        field[i, j] = field[i-1, j] + flux*self._dr
-                        counter += 1
-                    elif self._bnd_type == BoundaryType.NEUMANN_SO:
-                        # Calculate flux from components
-                        flux = data[counter, 0] * (self._x[counter]/self._r[counter]) + data[counter, 1] * (self._y[counter]/self._r[counter])
-                        # Modify boundary value by second order evaluation of gradient
-                        field[i, j] = (4/3)*field[i-1, j] - (1/3)*field[i-2, j] + (2/3)*self._dr*flux
-                        counter += 1
-                    else:
-                        raise Exception("Invalid boundary type provided.")
+        # Set boundary condition at initialization
+        self.set_bnd_vals_so(field, data)
 
-    def set_bnd_vals(self, field, data):
-        counter = 0
-        if self._bnd_type == BoundaryType.DIRICHLET:
-            for inds in self._bnd_inds:
-                field[inds[0], inds[1]] = data[counter]
-                counter += 1
-        elif self._bnd_type == BoundaryType.NEUMANN_FO:
-            counter = 0
-            for inds in self._bnd_inds:
-                # Calculate flux from components
-                flux = data[counter, 0]*(self._x[counter]/self._r[counter]) + data[counter, 1]*(self._y[counter]/self._r[counter])
-                # Modify boundary value by first order evaluation of gradient
-                field[inds[0], inds[1]] = field[inds[0]-1, inds[1]] + flux*self._dr
-                counter += 1
-        elif self._bnd_type == BoundaryType.NEUMANN_SO:
-            counter = 0
-            for inds in self._bnd_inds:
-                # Calculate flux from components
-                flux = data[counter, 0]*(self._x[counter]/self._r[counter]) + data[counter, 1]*(self._y[counter]/self._r[counter])
-                # Modify boundary value by second order evaluation of gradient
-                # NOTE: This implementation is only valid for Wall boundary cells (outer most cells)
-                field[inds[0], inds[1]] = (4/3)*field[inds[0]-1, inds[1]] - (1/3)*field[inds[0]-2, inds[1]] + (2/3)*self._dr*flux
-                counter += 1
+    def set_bnd_vals_so(self, field, flux):
+        # Set the boundary values at the outer edge of the Core domain
+        j = self._nrho - 1
+
+        # Handle periodicity in theta direction due to symmetric stencil
+        ip = [self._ntheta-2, self._ntheta-1, 0, 1]
+        for i in range(1, 3):
+            # Dirichlet condition at inner boundary
+            field[ip[i], 0] = 0.0
+            # Neumann condition at outer boundary (2nd order)
+            field[ip[i], j] = 4*field[ip[i], j-1]/3 - field[ip[i], j-2]/3 - (self._drho*self._g_rt[ip[i], j])/(3*self._dtheta*self._g_rr[ip[i], j])*(2*field[ip[i-1], j-1] - 2*field[ip[i+1], j-1] + field[ip[i+1], j-2] - field[ip[i-1],j-2]) + \
+                (2*self._drho)/(3*math.sqrt(self._g_rr[ip[i], j]))*(flux[ip[i]])
+
+        for i in range(1, self._ntheta-1):
+            # Dirichlet condition at inner boundary
+            field[i, 0] = 0.0
+            # Neumann condition at outer boundary (2nd order)
+            field[i, j] = 4*field[i, j-1]/3 - field[i, j-2]/3 - (self._drho*self._g_rt[i, j])/(3*self._dtheta*self._g_rr[i, j])*(2*field[i-1, j-1] - 2*field[i+1, j-1] + field[i+1, j-2] - field[i-1,j-2]) + \
+                (2*self._drho)/(3*math.sqrt(self._g_rr[i, j]))*(flux[i])
 
     def get_bnd_vals(self, field):
         bnd_data = []
+        # Write data from the interior of the domain (2 mesh widths inside the physical boundary)
+        j = self._nrho - 3
         # Gets Dirichlet values and returns them for coupling
-        for inds in self._bnd_inds:
-            bnd_data.append(field[inds[0], inds[1]])
-
+        for i in range(self._ntheta):
+            bnd_data.append(field[i, j])
+        
         return np.array(bnd_data)
-
-    def set_bnd_vals_mms(self, field, t):
-        """
-        gradient(f)_{r} = (2*pi/(rmax - rmin))*cos(2*pi*(r - rmin)/(rmax - rmin))*cos(t)*cos(theta)
-        """
-        counter = 0
-        if self._bnd_type == BoundaryType.DIRICHLET:
-            for inds in self._bnd_inds:
-                # Zero value selected for Dirichlet boundary condition for MMS analysis
-                field[inds[0], inds[1]] = 0.0
-                counter += 1
-        elif self._bnd_type == BoundaryType.NEUMANN_SO:
-            for inds in self._bnd_inds:
-                # Modify boundary value by evaluation of gradient of ansatz
-                a = 2 * math.pi * (self._r[counter] - self._rmin) / (self._rmax - self._rmin)
-                b = 2 * math.pi / (self._rmax - self._rmin)
-                # NOTE: This implementation is only valid for Wall boundary cells (outer most cells)
-                flux = b * math.cos(a) * math.cos(t) * math.cos(self._theta[counter])
-                # Modify boundary value by second order evaluation of gradient
-                field[inds[0], inds[1]] = (4/3)*field[inds[0]-1, inds[1]] - (1/3)*field[inds[0]-2, inds[1]] + (2/3)*self._dr*flux
-                counter += 1
 
     def set_bnd_vals_ansol(self, ansol, field, t):
         """
-        Assign the analytical solution according to the Bessel function at the inner and outer boundary
+        Assign Neumann boundary condition according to Bessel function at inner and outer boundary
         """
-        counter = 0
-        if self._bnd_type == BoundaryType.DIRICHLET:
-            for inds in self._bnd_inds:
-                field[inds[0], inds[1]] = ansol.ansol(self._r[counter], self._theta[counter], t)
-                counter += 1
-        elif self._bnd_type == BoundaryType.NEUMANN_SO:
-            for inds in self._bnd_inds:
-                flux = ansol.ansol_gradient(self._r[counter], self._theta[counter], t)
-                # Modify boundary value by second order evaluation of gradient
-                field[inds[0], inds[1]] = (4/3)*field[inds[0]-1, inds[1]] - (1/3)*field[inds[0]-2, inds[1]] + (2/3)*self._dr*flux
-                counter += 1
+        # Set the boundary values at the outer edge of the Core domain
+        j = self._nrho - 1
+
+        # Handle periodicity in theta direction due to symmetric stencil
+        ip = [self._ntheta-2, self._ntheta-1, 0, 1]
+        for i in range(1, 3):
+            # Dirichlet condition at inner boundary
+            field[ip[i], 0] = ansol.ansol(self._rho[j], self._theta[i], t)
+            # Neumann condition at outer boundary (2nd order)
+            flux = ansol.ansol_gradient(self._rho[j], self._theta[i], t)
+            field[ip[i], j] = 4*field[ip[i], j-1]/3 - field[ip[i], j-2]/3 - (self._drho*self._g_rt[ip[i], j])/(3*self._dtheta*self._g_rr[ip[i], j])*(2*field[ip[i-1], j-1] - 2*field[ip[i+1], j-1] + field[ip[i+1], j-2] - field[ip[i-1],j-2]) + \
+                (2*self._drho)/(3*math.sqrt(self._g_rr[ip[i], j]))*(flux[ip[i]])
+
+        for i in range(1, self._ntheta-1):
+            # Dirichlet condition at inner boundary
+            field[i, 0] = ansol.ansol(self._rho[j], self._theta[i], t)
+            # Neumann condition at outer boundary (2nd order)
+            flux = ansol.ansol_gradient(self._rho[j], self._theta[i], t)
+            field[i, j] = 4*field[i, j-1]/3 - field[i, j-2]/3 - (self._drho*self._g_rt[i, j])/(3*self._dtheta*self._g_rr[i, j])*(2*field[i-1, j-1] - 2*field[i+1, j-1] + field[i+1, j-2] - field[i-1,j-2]) + \
+                (2*self._drho)/(3*math.sqrt(self._g_rr[i, j]))*(flux[i])

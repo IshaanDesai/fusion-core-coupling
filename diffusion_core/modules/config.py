@@ -22,25 +22,22 @@ class Config:
 
         self._config_file_name = None
         self._participant_name = None
-        self._coupling_mesh_name = None
+        self._read_mesh_name = None
+        self._write_mesh_name = None
         self._read_data_name = None
         self._write_data_name = None
 
-        self._dims = None
-        self._rmin = None
-        self._rmax = None
-        self._r_points = None
-        self._theta_points = None
+        self._meshtype = None
 
-        self._diffc_perp = None
+        self._diffc = None
+
+        self._coupling_on = None
         self._dt = None
         self._t_total = None
         self._t_out = None
 
-        self._xb = None
-        self._yb = None
-        self._wxb = None
-        self._wyb = None
+        self._m = None
+        self._ums = None
 
         self.read_json(config_filename)
 
@@ -58,28 +55,22 @@ class Config:
         data = json.load(read_file)
         self._config_file_name = os.path.join(folder, data["config_file_name"])
         self._participant_name = data["participant_name"]
-        self._coupling_mesh_name = data["interface"]["coupling_mesh_name"]
-        try:
-            self._write_data_name = data["interface"]["write_data_name"]
-        except:
-            self._write_data_name = None
+        self._read_mesh_name = data["interface"]["read_mesh_name"]
+        self._write_mesh_name = data["interface"]["write_mesh_name"]
+        self._write_data_name = data["interface"]["write_data_name"]
         self._read_data_name = data["interface"]["read_data_name"]
 
-        self._dims = data["mesh_parameters"]["dimensions"]
-        self._rmin = data["mesh_parameters"]["r_inner"]
-        self._rmax = data["mesh_parameters"]["r_outer"]
-        self._r_points = data["mesh_parameters"]["radial_points"]
-        self._theta_points = data["mesh_parameters"]["circular_points"]
+        self._meshtype = data["mesh_parameters"]["type"]
 
-        self._diffc_perp = data["diffusion_parameters"]["coeff_perp"]
+        self._diffc = data["diffusion_parameters"]["diff_coeff"]
+
+        self._coupling_on = data["simulation_parameters"]["coupling_on"]
         self._dt = data["simulation_parameters"]["timestep"]
         self._t_total = data["simulation_parameters"]["total_time"]
         self._t_out = data["simulation_parameters"]["t_output"]
 
-        self._xb = data["init_conditions"]["xb"]
-        self._yb = data["init_conditions"]["yb"]
-        self._wxb = data["init_conditions"]["wxb"]
-        self._wyb = data["init_conditions"]["wyb"]
+        self._m = data["bessel_params"]["pol_mode_number"]
+        self._ums = data["bessel_params"]["ums"]
 
         read_file.close()
 
@@ -89,8 +80,11 @@ class Config:
     def get_participant_name(self):
         return self._participant_name
 
-    def get_coupling_mesh_name(self):
-        return self._coupling_mesh_name
+    def get_read_mesh_name(self):
+        return self._read_mesh_name
+
+    def get_write_mesh_name(self):
+        return self._write_mesh_name
 
     def get_read_data_name(self):
         return self._read_data_name
@@ -98,23 +92,11 @@ class Config:
     def get_write_data_name(self):
         return self._write_data_name
 
-    def get_dims(self):
-        return self._dims
-
-    def get_rmin(self):
-        return self._rmin
-
-    def get_rmax(self):
-        return self._rmax
-
-    def get_r_points(self):
-        return self._r_points
-
-    def get_theta_points(self):
-        return self._theta_points
+    def get_mesh_type(self):
+        return self._meshtype
 
     def get_diffusion_coeff(self):
-        return self._diffc_perp
+        return self._diffc
 
     def get_dt(self):
         return self._dt
@@ -125,9 +107,11 @@ class Config:
     def get_t_output(self):
         return self._t_out
 
-    def get_xb_yb(self):
-        return self._xb, self._yb
+    def get_pol_mode_number(self):
+        return self._m
 
-    def get_wxb_wyb(self):
-        return self._wxb, self._wyb
+    def get_ums(self):
+        return self._ums
 
+    def is_coupling_on(self):
+        return self._coupling_on

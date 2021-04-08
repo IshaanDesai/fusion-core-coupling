@@ -7,11 +7,9 @@ from scipy import special
 import math
 
 class Ansol:
-
     def __init__(self, config):
-        self._m = 2 # Poloidal mode number
-        self._s = 2 # Radial mode number
-        self._ums = 8.4172 # s'th zero of Bessel function of first kind of order m, see https://mathworld.wolfram.com/BesselFunctionZeros.html 
+        self._m = config.get_pol_mode_number() # Poloidal mode number
+        self._ums = config.get_ums() # 2nd (radial mode num) zero of Bessel function of first kind of order m, see https://mathworld.wolfram.com/BesselFunctionZeros.html 
 
         self._diffc = config.get_diffusion_coeff()
 
