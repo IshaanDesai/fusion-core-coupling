@@ -27,7 +27,7 @@ class Config:
         self._read_data_name = None
         self._write_data_name = None
 
-        self._meshtype = None
+        self._meshfile = None
 
         self._diffc = None
 
@@ -60,7 +60,7 @@ class Config:
         self._write_data_name = data["interface"]["write_data_name"]
         self._read_data_name = data["interface"]["read_data_name"]
 
-        self._meshtype = data["mesh_parameters"]["type"]
+        self._meshfile = data["mesh_parameters"]["file_name"]
 
         self._diffc = data["diffusion_parameters"]["diff_coeff"]
 
@@ -92,8 +92,8 @@ class Config:
     def get_write_data_name(self):
         return self._write_data_name
 
-    def get_mesh_type(self):
-        return self._meshtype
+    def get_mesh_file_name(self):
+        return self._meshfile
 
     def get_diffusion_coeff(self):
         return self._diffc

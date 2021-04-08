@@ -24,13 +24,6 @@ class Diffusion:
         # Read initial conditions from a JSON config file
         self._config = Config('diffusion-coupling-config.json')
 
-        # Define coupling interface
-        self._interface = precice.Interface(self._config.get_participant_name(), self._config.get_config_file_name(), 0, 1)
-
-        # Coupling mesh
-        self._coupling_write_mesh_vertices = None
-        self._vertex_ids = None
-
     def solve_diffusion(self):
         start_time = process_time()
 
@@ -40,18 +33,14 @@ class Diffusion:
         config = Config(problem_config_file)
 
         # Check if the case is coupling or not
-        coupling_on = self._config.is_coupling_ongoing()
+        coupling_on = self._config.is_coupling_on()
 
         # Iterators
         cdef Py_ssize_t i, j
         cdef double precice_dt
 
         # Mesh setup
-        mesh = None
-        if config.get_mesh_type() == "CERFONS":
-            mesh = Mesh(config, "/u/idesai/fusion-core-coupling/cerfons_geom_data.nc")
-        elif config.get_mesh_type() == "CIRCULAR":
-            mesh = Mesh(config, "/u/idesai/fusion-core-coupling/circular_geom_data.nc")
+        mesh = Mesh(config)
 
         cdef double drho = mesh.get_drho()
         cdef double dtheta = mesh.get_dtheta()
@@ -72,7 +61,7 @@ class Diffusion:
         cdef double [:, ::1] du = du_np
 
         # Analytical solution setup
-        ansol_bessel = Ansol(config)
+        ansol_bessel = Ansol(config, mesh)
 
         # Setting initial state of the field using analytical solution formulation
         for i in range(ntheta):
@@ -80,36 +69,36 @@ class Diffusion:
                 u[i, j] = ansol_bessel.ansol(rho[j], theta[i], 0)
 
         # Initialize boundary conditions at inner and outer edge of the torus
-        bndvals_wall = np.zeros((mesh.get_n_points_wall(), 2))
-        boundary = Boundary(config, mesh, bndvals_wall, u)
+        boundary = Boundary(config, mesh)
 
         # Reset boundary conditions according to analytical solution
         boundary.set_bnd_vals_ansol(ansol_bessel, u, 0)
 
         if coupling_on:
+            # Define coupling interface
+            interface = precice.Interface(self._config.get_participant_name(), self._config.get_config_file_name(), 0, 1)
+            
             # Setup read coupling mesh
             vertices = []
             for i in range(ntheta):
                 vertices.append([xpol[i, nrho-1], ypol[i, nrho-1]])
 
-            read_vertex_ids = self._interface.set_mesh_vertices(self._interface.get_mesh_id(
-                self._config.get_read_mesh_name()), vertices)
+            read_vertex_ids = interface.set_mesh_vertices(self._interface.get_mesh_id(self._config.get_read_mesh_name()), vertices)
 
             # Set up read mesh in preCICE
-            read_mesh_id = self._interface.get_mesh_id(self._config.get_read_mesh_name())
-            read_data_id = self._interface.get_data_id(self._config.get_read_data_name(), read_mesh_id)
+            read_mesh_id = interface.get_mesh_id(self._config.get_read_mesh_name())
+            read_data_id = interface.get_data_id(self._config.get_read_data_name(), read_mesh_id)
 
             # Setup write coupling mesh
             vertices = []
             for i in range(ntheta):
                 vertices.append([xpol[i, nrho-3], ypol[i, nrho-3]])
 
-            write_vertex_ids = self._interface.set_mesh_vertices(self._interface.get_mesh_id(
-                self._config.get_write_mesh_name()), vertices)
+            write_vertex_ids = interface.set_mesh_vertices(interface.get_mesh_id(self._config.get_write_mesh_name()), vertices)
 
             # Set up write mesh in preCICE
-            write_mesh_id = self._interface.get_mesh_id(self._config.get_write_mesh_name())
-            write_data_id = self._interface.get_data_id(self._config.get_write_data_name(), write_mesh_id)
+            write_mesh_id = interface.get_mesh_id(self._config.get_write_mesh_name())
+            write_data_id = interface.get_data_id(self._config.get_write_data_name(), write_mesh_id)
 
         # Get parameters from config and mesh modules
         diffc = config.get_diffusion_coeff()
@@ -128,26 +117,32 @@ class Diffusion:
 
         if coupling_on:
             # Initialize preCICE interface
-            precice_dt = self._interface.initialize()
+            precice_dt = interface.initialize()
             dt = min(precice_dt, dt)
 
         cdef int n_t = int(t_total/dt)
         cdef int n_out = int(t_out/dt)
-        print("n_t = {}, n_out = {}".format(n_t, n_out))
+        self.logger.info("n_t = {}, n_out = {}".format(n_t, n_out))
 
         # Write initial state
         write_csv(u, mesh, 0)
         write_vtk(u, mesh, 0)
 
-        # Time loop
         cdef double u_sum
         # Time loop
         cdef int n = 0
         cdef double t = 0.0
-        while self._interface.is_coupling_ongoing():
+
+        is_coupling_ongoing = True
+        
+        while is_coupling_ongoing:
+            # Simulation time is done
+            if n >= n_t:
+                break
+
             if coupling_on:
                 # Read data from preCICE and set fluxes
-                flux_vals = self._interface.read_block_scalar_data(read_data_id, read_vertex_ids)
+                flux_vals = interface.read_block_scalar_data(read_data_id, read_vertex_ids)
                 boundary.set_bnd_vals_so(u, flux_vals)
 
                 # Update time step
@@ -200,10 +195,10 @@ class Diffusion:
             if coupling_on:
                 # Write data to coupling interface preCICE
                 node_vals = boundary.get_bnd_vals(u)
-                self._interface.write_block_scalar_data(write_data_id, write_vertex_ids, node_vals)
+                interface.write_block_scalar_data(write_data_id, write_vertex_ids, node_vals)
 
                 # Advance coupling via preCICE
-                precice_dt = self._interface.advance(dt)
+                precice_dt = interface.advance(dt)
 
             # Set analytical boundary conditions in each iteration
             boundary.set_bnd_vals_ansol(ansol_bessel, u, (n+1)*dt)
@@ -212,9 +207,9 @@ class Diffusion:
             n += 1
             t += dt
 
-            if n%n_out == 0 or n == n_t-1:
-                write_csv(u, mesh, n+1)
-                write_vtk(u, mesh, n+1)
+            if n%n_out == 0 or n == n_t:
+                write_csv(u, mesh, n)
+                write_vtk(u, mesh, n)
                 self.logger.info('VTK file output written at t = %f', n*dt)
                 u_sum = 0
                 for i in range(ntheta):
@@ -224,7 +219,12 @@ class Diffusion:
                 self.logger.info("Elapsed time = {}  || Field sum = {}".format(n*dt, u_sum/(nrho*ntheta)))
                 self.logger.info("Elapsed CPU time = {}".format(process_time()))
 
-                ansol_bessel.compare_ansoln(mesh, u, n*dt, self.logger)
+                ansol_bessel.compare_ansoln(u, n*dt, self.logger)
+
+            if coupling_on:
+                is_coupling_ongoing = interface.is_coupling_ongoing()
+            else:
+                is_coupling_ongoing = True
 
         self.logger.info("Total CPU time = {}".format(process_time()))
         # End

@@ -8,26 +8,19 @@
       "write_data_name": "value"
     },
   "mesh_parameters": {
-      "dimensions": 2,
-      "r_inner": 0.2,
-      "r_outer": 1.0,
-      "radial_points": 200,
-      "circular_points": 800,
-      "type": "CIRCULAR"
+      "file_name": "circular_50_200.nc"
   },
   "diffusion_parameters": {
-    "coeff_perp": 1.0
+    "diff_coeff": 1.0
   },
   "simulation_parameters": {
       "coupling_on": false,
       "total_time": 0.015,
-      "timestep": 2.5E-7,
-      "t_output": 0.005,
+      "timestep": 4.0E-6,
+      "t_output": 0.005
   },
-  "init_conditions": {
-      "xb": 0.9,
-      "yb": -0.35,
-      "wxb": 0.05,
-      "wyb": 0.05
+  "bessel_params": {
+      "pol_mode_number": 2,
+      "ums": 8.4172
   }
 }

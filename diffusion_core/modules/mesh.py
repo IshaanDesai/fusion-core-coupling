@@ -3,11 +3,16 @@ Read mesh from NetCFD4 file generated using the PARALLAX code
 """
 import netCDF4 as nc
 import numpy as np
+import os
+import sys
 
 
 class Mesh:
-    def __init__(self, config, filename):
-        ds = nc.Dataset(filename)
+    def __init__(self, config):
+        folder = os.path.dirname(os.path.join(os.getcwd(), os.path.dirname(sys.argv[0]), config.get_mesh_file_name()))
+        path = os.path.join(folder, os.path.basename(config.get_mesh_file_name()))
+        ds = nc.Dataset(path)
+
         self._drho, self._dtheta = ds.getncattr('drho'), ds.getncattr('dtheta')
         self._nrho, self._ntheta = ds.dimensions['nrho'].size, ds.dimensions['ntheta'].size
 

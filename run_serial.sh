@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 #SBATCH -J polar_diff
-#SBATCH --partition=general
+#SBATCH --partition=express
 # number of nodes
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=8000
-#SBATCH --time=24:00:00
+#SBATCH --time=00:20:00
 
 # Reloading correct modules for python polar code:
 module load anaconda/3/2019.03
