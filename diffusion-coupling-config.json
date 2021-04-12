@@ -8,16 +8,16 @@
       "write_data_name": "value"
     },
   "mesh_parameters": {
-      "file_name": "circular_50_200.nc"
+      "file_name": "circular_25_100.nc"
   },
   "diffusion_parameters": {
     "diff_coeff": 1.0
   },
   "simulation_parameters": {
-      "coupling_on": false,
+      "coupling_on": true,
       "total_time": 0.015,
-      "timestep": 4.0E-6,
-      "t_output": 0.005
+      "timestep": 1.6E-5,
+      "t_output": 0.0075
   },
   "bessel_params": {
       "pol_mode_number": 2,

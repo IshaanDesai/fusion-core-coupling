@@ -89,7 +89,7 @@ class Diffusion:
             read_mesh_id = interface.get_mesh_id(self._config.get_read_mesh_name())
             read_data_id = interface.get_data_id(self._config.get_read_data_name(), read_mesh_id)
 
-            # Setup write coupling mesh
+            # Setup write coupling mesh (two mesh widths inside the domain)
             vertices = []
             for i in range(ntheta):
                 vertices.append([xpol[i, nrho-3], ypol[i, nrho-3]])

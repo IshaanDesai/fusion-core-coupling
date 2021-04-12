@@ -39,7 +39,7 @@ dt             = [1.6e-5, 4.0e-6, 1.0e-6, 2.5e-7, 6.25e-8]
 # EDGE: PARALLAX (only Dirichlet BCs) results
 coarse_err_edge = 0.00031
 # Manually enter errors acquired from runs
-linf_err_edge = [0.00057, 0.00014, 0.000036, 0]
+linf_err_edge = [0.00057, 0.00014, 0.000036, 0.0000048]
 l2_err_edge = [coarse_err_edge, 0.000077, 0.000012, 0.000003]
 O1_err_edge = [coarse_err_edge, coarse_err_edge/2, coarse_err_edge/4, coarse_err_edge/8]
 O2_err_edge = [coarse_err_edge, coarse_err_edge/4, coarse_err_edge/16, coarse_err_edge/64]
