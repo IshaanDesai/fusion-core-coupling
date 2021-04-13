@@ -83,7 +83,7 @@ class Diffusion:
             for i in range(ntheta):
                 vertices.append([xpol[i, nrho-1], ypol[i, nrho-1]])
 
-            read_vertex_ids = interface.set_mesh_vertices(self._interface.get_mesh_id(self._config.get_read_mesh_name()), vertices)
+            read_vertex_ids = interface.set_mesh_vertices(interface.get_mesh_id(self._config.get_read_mesh_name()), vertices)
 
             # Set up read mesh in preCICE
             read_mesh_id = interface.get_mesh_id(self._config.get_read_mesh_name())
@@ -101,16 +101,14 @@ class Diffusion:
             write_data_id = interface.get_data_id(self._config.get_write_data_name(), write_mesh_id)
 
         # Get parameters from config and mesh modules
-        diffc = config.get_diffusion_coeff()
-        self.logger.info('Diffusion coefficient = %f', diffc)
         cdef double dt = config.get_dt()
         self.logger.info('dt = %f', dt)
         t_total, t_out = config.get_total_time(), config.get_t_output()
 
         # Check the CFL Condition for Diffusion Equation
-        cfl_rho = dt * diffc / (drho * drho)
+        cfl_rho = dt / (drho * drho)
         self.logger.info('CFL Coefficient with radial param = %f. Must be less than 0.5', cfl_rho)
-        cfl_theta = dt * diffc / (np.mean(rho) * np.mean(rho) * dtheta * dtheta)
+        cfl_theta = dt / (np.mean(rho) * np.mean(rho) * dtheta * dtheta)
         self.logger.info('CFL Coefficient with theta param = %f. Must be less than 0.5', cfl_theta)
         assert (cfl_rho < 0.5)
         assert (cfl_theta < 0.5)
@@ -133,13 +131,12 @@ class Diffusion:
         cdef int n = 0
         cdef double t = 0.0
 
-        is_coupling_ongoing = True
+        if coupling_on:
+            is_coupling_ongoing = interface.is_coupling_ongoing()
+        else:
+            is_coupling_ongoing = True
         
         while is_coupling_ongoing:
-            # Simulation time is done
-            if n >= n_t:
-                break
-
             if coupling_on:
                 # Read data from preCICE and set fluxes
                 flux_vals = interface.read_block_scalar_data(read_data_id, read_vertex_ids)
@@ -190,7 +187,7 @@ class Diffusion:
             # Update scheme
             for i in range(ntheta):
                 for j in range(nrho):
-                    u[i, j] += dt*diffc*du[i, j] / jac[i, j]
+                    u[i, j] += dt*du[i, j] / jac[i, j]
 
             if coupling_on:
                 # Write data to coupling interface preCICE
@@ -221,10 +218,15 @@ class Diffusion:
 
                 ansol_bessel.compare_ansoln(u, n*dt, self.logger)
 
+            # Simulation time is done
+            if n >= n_t:
+                is_coupling_ongoing = False
+            
             if coupling_on:
                 is_coupling_ongoing = interface.is_coupling_ongoing()
-            else:
-                is_coupling_ongoing = True
 
+        if coupling_on:
+            interface.finalize()
+            
         self.logger.info("Total CPU time = {}".format(process_time()))
         # End

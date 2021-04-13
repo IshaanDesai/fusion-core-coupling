@@ -1,17 +1,14 @@
 {
   "participant_name": "Core",
-  "config_file_name": "precice-config-div.xml",
+  "config_file_name": "precice-config.xml",
   "interface": {
-      "read_mesh_name": "core_read_mesh",
-      "write_mesh_name": "core_write_mesh",
+      "read_mesh_name": "core_read",
+      "write_mesh_name": "core_write",
       "read_data_name": "flux",
       "write_data_name": "value"
     },
   "mesh_parameters": {
-      "file_name": "circular_25_100.nc"
-  },
-  "diffusion_parameters": {
-    "diff_coeff": 1.0
+      "file_name": "mesh_files/circular_25_100_coupling.nc"
   },
   "simulation_parameters": {
       "coupling_on": true,

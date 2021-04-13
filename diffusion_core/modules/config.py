@@ -29,8 +29,6 @@ class Config:
 
         self._meshfile = None
 
-        self._diffc = None
-
         self._coupling_on = None
         self._dt = None
         self._t_total = None
@@ -62,8 +60,6 @@ class Config:
 
         self._meshfile = data["mesh_parameters"]["file_name"]
 
-        self._diffc = data["diffusion_parameters"]["diff_coeff"]
-
         self._coupling_on = data["simulation_parameters"]["coupling_on"]
         self._dt = data["simulation_parameters"]["timestep"]
         self._t_total = data["simulation_parameters"]["total_time"]
@@ -94,9 +90,6 @@ class Config:
 
     def get_mesh_file_name(self):
         return self._meshfile
-
-    def get_diffusion_coeff(self):
-        return self._diffc
 
     def get_dt(self):
         return self._dt

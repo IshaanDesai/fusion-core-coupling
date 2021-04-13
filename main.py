@@ -10,7 +10,7 @@ def main():
     logger = logging.getLogger('main')
     logger.setLevel(logging.DEBUG)
     # Create file handler which logs messages
-    fh = logging.FileHandler('logfile.log')
+    fh = logging.FileHandler('fusion-core-logger.log')
     fh.setLevel(logging.DEBUG)
     # Create formater and add it to handlers
     formatter = logging.Formatter('%(name)s -  %(levelname)s - %(message)s')
