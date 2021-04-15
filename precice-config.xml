@@ -35,7 +35,7 @@
       <write-data name="value" mesh="core_write"/>
       <read-data name="flux" mesh="core_read"/>
       <mapping:rbf-thin-plate-splines direction="write" from="core_write" to="edge_cart" constraint="consistent"/>
-      <mapping:nearest-neighbor direction="read" from="edge_polar" to="core_read" constraint="consistent"/>
+      <mapping:rbf-thin-plate-splines direction="read" from="edge_polar" to="core_read" constraint="consistent"/>
     </participant>
     
     <participant name="Edge">		
@@ -47,13 +47,13 @@
 
     <m2n:sockets from="Core" to="Edge" network="ib0"/>
 
-    <coupling-scheme:serial-explicit>
+    <coupling-scheme:parallel-explicit>
        <participants first="Core" second="Edge"/>
        <max-time value="0.015"/>
-       <time-window-size value="1.6e-5"/>
+       <time-window-size value="2.5e-7"/>
        <exchange data="value" mesh="edge_cart" from="Core" to="Edge"/>
        <exchange data="flux" mesh="edge_polar" from="Edge" to="Core"/>
-    </coupling-scheme:serial-explicit>
+    </coupling-scheme:parallel-explicit>
 
   </solver-interface>
 </precice-configuration>

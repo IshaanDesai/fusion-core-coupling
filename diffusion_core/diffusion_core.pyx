@@ -55,10 +55,9 @@ class Diffusion:
         cdef double [:, ::1]  g_tt = mesh.get_g_theta_theta()
 
         # Field variable array
-        u_np = np.zeros((ntheta, nrho), dtype=np.double)
-        cdef double [:, ::1] u = u_np
-        du_np = np.zeros((ntheta, nrho), dtype=np.double)
-        cdef double [:, ::1] du = du_np
+        cdef double [:, ::1] u = np.zeros((ntheta, nrho), dtype=np.double)
+        cdef double [:, ::1] du = np.zeros((ntheta, nrho), dtype=np.double)
+        cdef double [:, ::1] u_err = np.zeros((ntheta, nrho), dtype=np.double)
 
         # Analytical solution setup
         ansol_bessel = Ansol(config, mesh)
@@ -123,8 +122,8 @@ class Diffusion:
         self.logger.info("n_t = {}, n_out = {}".format(n_t, n_out))
 
         # Write initial state
-        write_csv(u, mesh, 0)
-        write_vtk(u, mesh, 0)
+        write_csv("fusion-core", u, mesh, 0)
+        write_vtk("fusion-core", u, mesh, 0)
 
         cdef double u_sum
         # Time loop
@@ -140,7 +139,7 @@ class Diffusion:
             if coupling_on:
                 # Read data from preCICE and set fluxes
                 flux_vals = interface.read_block_scalar_data(read_data_id, read_vertex_ids)
-                boundary.set_bnd_vals_so(u, flux_vals)
+                boundary.set_bnd_vals_so(u, ansol_bessel, t, flux_vals)
 
                 # Update time step
                 dt = min(precice_dt, dt)
@@ -196,22 +195,25 @@ class Diffusion:
 
                 # Advance coupling via preCICE
                 precice_dt = interface.advance(dt)
-
-            # Set analytical boundary conditions in each iteration
-            boundary.set_bnd_vals_ansol(ansol_bessel, u, (n+1)*dt)
+            else:
+                # Set analytical boundary conditions in each iteration
+                boundary.set_bnd_vals_ansol(ansol_bessel, u, (n+1)*dt)
 
             # update solution
             n += 1
             t += dt
 
             if n%n_out == 0 or n == n_t:
-                write_csv(u, mesh, n)
-                write_vtk(u, mesh, n)
+                write_csv("fusion-core", u, mesh, n)
+                write_vtk("fusion-core", u, mesh, n)
                 self.logger.info('VTK file output written at t = %f', n*dt)
                 u_sum = 0
                 for i in range(ntheta):
                     for j in range(nrho):
                         u_sum += u[i, j]
+                        u_err[i, j] = abs(u[i, j] - ansol_bessel.ansol(rho[j], theta[i], t))
+
+                write_csv("error", u_err, mesh, n)
 
                 self.logger.info("Elapsed time = {}  || Field sum = {}".format(n*dt, u_sum/(nrho*ntheta)))
                 self.logger.info("Elapsed CPU time = {}".format(process_time()))

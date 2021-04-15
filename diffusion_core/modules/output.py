@@ -8,19 +8,18 @@ import numpy as np
 import csv
 
 
-def write_vtk(field, mesh, t):
-    filename = "field_out_{}".format(t)
+def write_vtk(filename, field, mesh, t):
+    filename = filename+"_{}".format(t)
     xpol = mesh.get_x_vals()
     ypol = mesh.get_y_vals()
     nrho = mesh.get_nrho()
     ntheta = mesh.get_ntheta()
 
-    nz = 1
-    x_out = np.zeros((ntheta, nrho, nz))
-    y_out = np.zeros((ntheta, nrho, nz))
-    z_out = np.zeros((ntheta, nrho, nz))
-    point_type = np.zeros((ntheta, nrho, nz))
-    field_out = np.zeros((ntheta, nrho, nz))
+    x_out = np.zeros((ntheta, nrho, 1))
+    y_out = np.zeros((ntheta, nrho, 1))
+    z_out = np.zeros((ntheta, nrho, 1))
+    point_type = np.zeros((ntheta, nrho, 1))
+    field_out = np.zeros((ntheta, nrho, 1))
 
     for i in range(ntheta):
         for j in range(nrho):
@@ -32,13 +31,13 @@ def write_vtk(field, mesh, t):
     gridToVTK("./output/"+filename, x_out, y_out, z_out, pointData={"field": field_out, "type": point_type})
 
 
-def write_csv(field, mesh, n):
+def write_csv(filename, field, mesh, n):
     xpol = mesh.get_x_vals()
     ypol = mesh.get_y_vals()
     nrho = mesh.get_nrho()
     ntheta = mesh.get_ntheta()
 
-    with open('./output/polar_'+str(n)+'.csv', mode='w') as file:
+    with open('./output/'+filename+'_'+str(n)+'.csv', mode='w') as file:
         file_writer = csv.writer(file, delimiter=',')
         for i in range(ntheta):
             for j in range(nrho):

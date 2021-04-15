@@ -22,7 +22,7 @@ class Boundary:
         self._rho = mesh.get_rho_vals()
         self._theta = mesh.get_theta_vals()
 
-    def set_bnd_vals_so(self, field, flux):
+    def set_bnd_vals_so(self, field, ansol, t, flux):
         # Set the boundary values at the outer edge of the Core domain
         j = self._nrho - 1
 
@@ -30,19 +30,19 @@ class Boundary:
         ip = [self._ntheta-2, self._ntheta-1, 0, 1]
         for i in range(1, 3):
             # Dirichlet condition at inner boundary
-            field[ip[i], 0] = 0.0
+            field[ip[i], 0] = ansol.ansol(self._rho[0], self._theta[ip[i]], t)
             # Neumann condition at outer boundary (2nd order)
             field[ip[i], j] = 4*field[ip[i], j-1]/3 - field[ip[i], j-2]/3 - (self._drho*self._g_rt[ip[i], j])/(3*self._dtheta*self._g_rr[ip[i], j])*(2*field[ip[i-1], j-1] - 2*field[ip[i+1], j-1] + field[ip[i+1], j-2] - field[ip[i-1],j-2]) + \
                 (2*self._drho)/(3*math.sqrt(self._g_rr[ip[i], j]))*(flux[ip[i]])
 
         for i in range(1, self._ntheta-1):
             # Dirichlet condition at inner boundary
-            field[i, 0] = 0.0
+            field[i, 0] = ansol.ansol(self._rho[0], self._theta[i], t)
             # Neumann condition at outer boundary (2nd order)
             field[i, j] = 4*field[i, j-1]/3 - field[i, j-2]/3 - (self._drho*self._g_rt[i, j])/(3*self._dtheta*self._g_rr[i, j])*(2*field[i-1, j-1] - 2*field[i+1, j-1] + field[i+1, j-2] - field[i-1,j-2]) + \
                 (2*self._drho)/(3*math.sqrt(self._g_rr[i, j]))*(flux[i])
 
-    def get_bnd_vals(self, field):
+    def get_bnd_vals(self, field):  
         bnd_data = []
         # Write data from the interior of the domain (2 mesh widths inside the physical boundary)
         j = self._nrho - 3

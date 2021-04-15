@@ -8,13 +8,13 @@
       "write_data_name": "value"
     },
   "mesh_parameters": {
-      "file_name": "mesh_files/circular_25_100_coupling.nc"
+      "file_name": "mesh_files/circular_200_800_coupling.nc"
   },
   "simulation_parameters": {
       "coupling_on": true,
       "total_time": 0.015,
-      "timestep": 1.6E-5,
-      "t_output": 0.0075
+      "timestep": 2.5E-7,
+      "t_output": 0.015
   },
   "bessel_params": {
       "pol_mode_number": 2,
