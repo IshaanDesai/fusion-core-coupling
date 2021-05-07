@@ -20,6 +20,8 @@ class Config:
 
     def __init__(self, config_filename):
 
+        self._coupling_on = None
+
         self._config_file_name = None
         self._participant_name = None
         self._read_mesh_name = None
@@ -29,7 +31,6 @@ class Config:
 
         self._meshfile = None
 
-        self._coupling_on = None
         self._dt = None
         self._t_total = None
         self._t_out = None
@@ -51,19 +52,21 @@ class Config:
         path = os.path.join(folder, os.path.basename(config_filename))
         read_file = open(path, "r")
         data = json.load(read_file)
-        self._config_file_name = os.path.join(folder, data["config_file_name"])
-        self._participant_name = data["participant_name"]
-        self._read_mesh_name = data["interface"]["read_mesh_name"]
-        self._write_mesh_name = data["interface"]["write_mesh_name"]
-        self._write_data_name = data["interface"]["write_data_name"]
-        self._read_data_name = data["interface"]["read_data_name"]
 
-        self._meshfile = data["mesh_parameters"]["file_name"]
+        self._coupling_on = data["coupling_on"]
+        if self._coupling_on is True:
+            self._participant_name = data["coupling_params"]["participant_name"]
+            self._config_file_name = os.path.join(folder, data["config_file_name"])
+            self._read_mesh_name = data["coupling_params"]["read_mesh_name"]
+            self._write_mesh_name = data["coupling_params"]["write_mesh_name"]
+            self._write_data_name = data["coupling_params"]["write_data_name"]
+            self._read_data_name = data["coupling_params"]["read_data_name"]
 
-        self._coupling_on = data["simulation_parameters"]["coupling_on"]
-        self._dt = data["simulation_parameters"]["timestep"]
-        self._t_total = data["simulation_parameters"]["total_time"]
-        self._t_out = data["simulation_parameters"]["t_output"]
+        self._meshfile = data["mesh_params"]["file_name"]
+
+        self._dt = data["simulation_params"]["timestep"]
+        self._t_total = data["simulation_params"]["total_time"]
+        self._t_out = data["simulation_params"]["t_output"]
 
         self._m = data["bessel_params"]["pol_mode_number"]
         self._ums = data["bessel_params"]["ums"]

@@ -21,19 +21,15 @@ class Diffusion:
     def __init__(self):
         self.logger = logging.getLogger('main.diffusion_core.Diffusion')
 
-        # Read initial conditions from a JSON config file
-        self._config = Config('diffusion-coupling-config.json')
-
     def solve_diffusion(self):
         start_time = process_time()
 
         self.logger.info('Solving Diffusion case')
         # Read initial conditions from a JSON config file
-        problem_config_file = "diffusion-coupling-config.json"
-        config = Config(problem_config_file)
+        config = Config("single-phy-config.json")
 
         # Check if the case is coupling or not
-        coupling_on = self._config.is_coupling_on()
+        coupling_on = config.is_coupling_on()
 
         # Iterators
         cdef Py_ssize_t i, j
@@ -75,29 +71,29 @@ class Diffusion:
 
         if coupling_on:
             # Define coupling interface
-            interface = precice.Interface(self._config.get_participant_name(), self._config.get_config_file_name(), 0, 1)
+            interface = precice.Interface(config.get_participant_name(), config.get_config_file_name(), 0, 1)
             
             # Setup read coupling mesh
             vertices = []
             for i in range(ntheta):
                 vertices.append([xpol[i, nrho-1], ypol[i, nrho-1]])
 
-            read_vertex_ids = interface.set_mesh_vertices(interface.get_mesh_id(self._config.get_read_mesh_name()), vertices)
+            read_vertex_ids = interface.set_mesh_vertices(interface.get_mesh_id(config.get_read_mesh_name()), vertices)
 
             # Set up read mesh in preCICE
-            read_mesh_id = interface.get_mesh_id(self._config.get_read_mesh_name())
-            read_data_id = interface.get_data_id(self._config.get_read_data_name(), read_mesh_id)
+            read_mesh_id = interface.get_mesh_id(config.get_read_mesh_name())
+            read_data_id = interface.get_data_id(config.get_read_data_name(), read_mesh_id)
 
             # Setup write coupling mesh (two mesh widths inside the domain)
             vertices = []
             for i in range(ntheta):
                 vertices.append([xpol[i, nrho-3], ypol[i, nrho-3]])
 
-            write_vertex_ids = interface.set_mesh_vertices(interface.get_mesh_id(self._config.get_write_mesh_name()), vertices)
+            write_vertex_ids = interface.set_mesh_vertices(interface.get_mesh_id(config.get_write_mesh_name()), vertices)
 
             # Set up write mesh in preCICE
-            write_mesh_id = interface.get_mesh_id(self._config.get_write_mesh_name())
-            write_data_id = interface.get_data_id(self._config.get_write_data_name(), write_mesh_id)
+            write_mesh_id = interface.get_mesh_id(config.get_write_mesh_name())
+            write_data_id = interface.get_data_id(config.get_write_data_name(), write_mesh_id)
 
         # Get parameters from config and mesh modules
         cdef double dt = config.get_dt()
