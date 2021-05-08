@@ -1,8 +1,10 @@
-## fusion-core-coupling
+
+# fusion-core-coupling
+
 This code is used to solve equations in a geomtric configuration suitable for modelling the core region of a tokamak fusion reactor. Flux-aligned coordinate systems are valid in the core region. A basic variant of such coordinates is the polar coordinate system which is implemented in this code. This code has the basic capability to handle diverted geometries as well.
 The main purpose of this code is to couple the core region of a fusion reactor with a code which models the edge region. Coupling is done using the library [preCICE](https://github.com/precice/precice)[1].
 
-This code was initially developed as part of a [Master thesis by Ishaan Desai](https://mediatum.ub.tum.de/604993?query=desai&show_id=1580087)[2] done jointly with the Max Planck Insitute of Plasma Physics and the Chair of Scientific Computing in Computer Science at Technical University of Munich. Current development is done as a joint collaboration between the [Tokamak Theory Division](https://www.ipp.mpg.de/ippcms/eng/for/bereiche/tokamak) at the Max Planck Institute of Plasma Physics and the [Department of Usability and Sustainability of Simulation Software](https://www.ipvs.uni-stuttgart.de/departments/us3/) at the University of Stuttgart.
+This code was initially developed as part of a [master thesis by Ishaan Desai](https://mediatum.ub.tum.de/604993?query=desai&show_id=1580087)[2] done jointly with the Max Planck Insitute of Plasma Physics and the Chair of Scientific Computing in Computer Science at Technical University of Munich. Current development is done as a joint collaboration between the [Tokamak Theory Division](https://www.ipp.mpg.de/ippcms/eng/for/bereiche/tokamak) at the Max Planck Institute of Plasma Physics and the [Department of Usability and Sustainability of Simulation Software](https://www.ipvs.uni-stuttgart.de/departments/us3/) at the University of Stuttgart.
 
 ## Compile Cython code
 Only the following branches can be run as stand-alone single physics simulations: [master](https://github.com/IshaanDesai/fusion-core-coupling), [diverted-diffusion](https://github.com/IshaanDesai/fusion-core-coupling/tree/diverted_diffusion). The other branches are developed for coupling purposes and require several dependencies to be installed before being able to use in a coupled simulation.
