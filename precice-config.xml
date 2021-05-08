@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+
+<precice-configuration>
+
+    <log>
+	<sink type="stream" output="stdout" filter="%Severity% > debug" enabled="true"/>
+    </log>
+  
+  <solver-interface dimensions="2">
+    
+    <data:scalar name="value"/>
+    <data:scalar name="flux"/>
+
+    <mesh name="core_read">
+       <use-data name="flux"/>
+    </mesh>
+
+    <mesh name="core_write">
+       <use-data name="value"/>
+    </mesh>
+
+    <mesh name="edge_cart">
+       <use-data name="value"/>
+    </mesh>
+
+    <mesh name="edge_polar">
+       <use-data name="flux"/>
+    </mesh>
+    
+    <participant name="Core">
+      <use-mesh name="core_read" provide="yes"/>
+      <use-mesh name="core_write" provide="yes"/>
+      <use-mesh name="edge_cart" from="Edge"/>
+      <use-mesh name="edge_polar" from="Edge"/>
+      <write-data name="value" mesh="core_write"/>
+      <read-data name="flux" mesh="core_read"/>
+      <mapping:rbf-thin-plate-splines direction="write" from="core_write" to="edge_cart" constraint="consistent"/>
+      <mapping:rbf-thin-plate-splines direction="read" from="edge_polar" to="core_read" constraint="consistent"/>
+    </participant>
+    
+    <participant name="Edge">		
+      <use-mesh name="edge_cart" provide="yes"/>
+      <use-mesh name="edge_polar" provide="yes"/>
+      <read-data name="value" mesh="edge_cart"/>
+      <write-data name="flux" mesh="edge_polar"/>
+    </participant>
+
+    <m2n:sockets from="Core" to="Edge" network="ib0"/>
+
+    <coupling-scheme:parallel-explicit>
+       <participants first="Core" second="Edge"/>
+       <max-time value="0.015"/>
+       <time-window-size value="2.5e-7"/>
+       <exchange data="value" mesh="edge_cart" from="Core" to="Edge"/>
+       <exchange data="flux" mesh="edge_polar" from="Edge" to="Core"/>
+    </coupling-scheme:parallel-explicit>
+
+  </solver-interface>
+</precice-configuration>
