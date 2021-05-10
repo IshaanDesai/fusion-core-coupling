@@ -61,9 +61,9 @@ The setup can be configured via the JSON configuration file: `diffusion-coupling
 ## Output and visualization
 
 * Log output is generated in the file `logfile.log`
-* VTK output can be found in the `output/` directory 
+* VTK output can be found in the `output/` directory
 
-### References
+## References
 
 [1] *H.-J. Bungartz, F. Lindner, B. Gatzhammer, M. Mehl, K. Scheufele, A. Shukaev, and B. Uekermann: preCICE - A Fully Parallel Library for Multi-Physics Surface Coupling. Computers and Fluids, 141, 250–258, 2016.*  
 [2] *Ishaan Desai, Geometric aspects of code coupling in magnetic fusion applications. Masterarbeit, Technical University of Munich, Oct 2020.*
