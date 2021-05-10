@@ -26,7 +26,7 @@ class Diffusion:
 
         self.logger.info('Solving Diffusion case')
         # Read initial conditions from a JSON config file
-        config = Config("single-phy-config.json")
+        config = Config("coupling-config.json")
 
         # Check if the case is coupling or not
         coupling_on = config.is_coupling_on()

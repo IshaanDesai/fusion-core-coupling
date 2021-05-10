@@ -55,7 +55,7 @@ class Config:
         self._coupling_on = data["coupling_on"]
         if self._coupling_on is True:
             self._participant_name = data["coupling_params"]["participant_name"]
-            self._config_file_name = os.path.join(folder, data["config_file_name"])
+            self._config_file_name = os.path.join(folder, data["coupling_params"]["config_file_name"])
             self._read_mesh_name = data["coupling_params"]["read_mesh_name"]
             self._write_mesh_name = data["coupling_params"]["write_mesh_name"]
             self._write_data_name = data["coupling_params"]["write_data_name"]

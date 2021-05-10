@@ -1,23 +1,23 @@
 {  
   "coupling_on": true,
   "coupling_params": {
-    "participant_name": "Core",
-  	"config_file_name": "precice-config.xml",
-    "read_mesh_name": "core_read",
-    "write_mesh_name": "core_write",
-    "read_data_name": "flux",
-    "write_data_name": "value"
+	  "participant_name": "Core",
+	  "config_file_name": "precice-config.xml",
+	  "read_mesh_name": "core_read",
+	  "write_mesh_name": "core_write",
+	  "read_data_name": "flux",
+	  "write_data_name": "value"
   },
   "mesh_params": {
-      "file_name": "mesh_files/circular_200_800_coupling.nc"
+    "file_name": "mesh_files/circular_25_100_coupling.nc"
   },
   "simulation_params": {
-      "total_time": 0.015,
-      "timestep": 2.5E-7,
-      "t_output": 0.015
+    "total_time": 0.015,
+    "timestep": 1.6E-5,
+    "t_output": 0.015
   },
   "bessel_params": {
-      "pol_mode_number": 2,
-      "ums": 8.4172
+    "pol_mode_number": 2,
+    "ums": 8.4172
   }
 }
