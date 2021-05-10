@@ -4,7 +4,6 @@
       "file_name": "mesh_files/circular_200_800.nc"
   },
   "simulation_params": {
-      "coupling_on": true,
       "total_time": 0.015,
       "timestep": 2.5E-7,
       "t_output": 0.015

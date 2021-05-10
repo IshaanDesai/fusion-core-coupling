@@ -64,7 +64,7 @@ class Diffusion:
                 u[i, j] = ansol_bessel.ansol(rho[j], theta[i], 0)
 
         # Initialize boundary conditions at inner and outer edge of the torus
-        boundary = Boundary(config, mesh)
+        boundary = Boundary(mesh)
 
         # Reset boundary conditions according to analytical solution
         boundary.set_bnd_vals_ansol(ansol_bessel, u, 0)
@@ -209,7 +209,7 @@ class Diffusion:
                         u_sum += u[i, j]
                         u_err[i, j] = abs(u[i, j] - ansol_bessel.ansol(rho[j], theta[i], t))
 
-                write_csv("error", u_err, mesh, n)
+                write_csv("error-inf", u_err, mesh, n)
 
                 self.logger.info("Elapsed time = {}  || Field sum = {}".format(n*dt, u_sum/(nrho*ntheta)))
                 self.logger.info("Elapsed CPU time = {}".format(process_time()))

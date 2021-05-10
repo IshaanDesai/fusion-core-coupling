@@ -60,7 +60,8 @@ class Boundary:
 
     def set_bnd_vals_ansol(self, ansol, field, t):
         """
-        Assign Neumann boundary condition according to Bessel function at inner and outer boundary
+        Apply Dirichlet boundary condition of value of analytical solution at inner boundary
+        Apply Neumann boundary condition of flux of gradient of analytical solution at outer boundary
         """
         # Set the boundary values at the outer edge of the Core domain
         j = self._nrho - 1
@@ -69,9 +70,9 @@ class Boundary:
         ip = [self._ntheta - 2, self._ntheta - 1, 0, 1]
         for i in range(1, 3):
             # Dirichlet condition at inner boundary
-            field[ip[i], 0] = ansol.ansol(self._rho[0], self._theta[i], t)
+            field[ip[i], 0] = ansol.ansol(self._rho[0], self._theta[ip[i]], t)
             # Neumann condition at outer boundary (2nd order)
-            flux = ansol.ansol_gradient(self._rho[j], self._theta[i], t)
+            flux = ansol.ansol_gradient(self._rho[j], self._theta[ip[i]], t)
             field[ip[i], j] = 4 * field[ip[i], j - 1] / 3 - field[ip[i], j - 2] / 3 - (
                     self._drho * self._g_rt[ip[i], j]) / (3 * self._dtheta * self._g_rr[ip[i], j]) * (
                                       2 * field[ip[i - 1], j - 1] - 2 * field[ip[i + 1], j - 1] +
