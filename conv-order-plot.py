@@ -29,10 +29,10 @@ a, b = 1, 1
 l2_o1_core, l2_o2_core = [], []
 linf_o1_core, linf_o2_core = [], []
 for i in range(4):
-    l2_o1_core.append(l2_errc_core/a)
-    l2_o2_core.append(l2_errc_core/b)
-    linf_o1_core.append(linf_errc_core*a)
-    linf_o2_core.append(linf_errc_core*b)
+    l2_o1_core.append(l2_errc_core / a)
+    l2_o2_core.append(l2_errc_core / b)
+    linf_o1_core.append(linf_errc_core * a)
+    linf_o2_core.append(linf_errc_core * b)
     a *= 2
     b *= 4
 
@@ -51,16 +51,16 @@ dt             = [1.6e-5, 4.0e-6, 1.0e-6, 2.5e-7]
 l2_errc_edge = 3.1e-4
 # Manually enter errors acquired from runs
 linf_errc_edge = [5.7e-4, 1.4e-4, 3.6e-5, 4.8e-6]
-l2_edge = [l2_errc_edge, 7.7e-5, 1.23-5, 3.0e-6]
+l2_edge = [l2_errc_edge, 7.7e-5, 1.23 - 5, 3.0e-6]
 linf_edge = []
 a, b = 1, 1
 l2_o1_edge, l2_o2_edge = [], []
 linf_o1_edge, linf_o2_edge = [], []
 for i in range(4):
-    l2_o1_edge.append(l2_errc_edge/a)
-    l2_o2_edge.append(l2_errc_edge/b)
-    #linf_o1_edge.append(linf_errc_edge*a)
-    #linf_o2_edge.append(linf_edge_core*b)
+    l2_o1_edge.append(l2_errc_edge / a)
+    l2_o2_edge.append(l2_errc_edge / b)
+    # linf_o1_edge.append(linf_errc_edge*a)
+    # linf_o2_edge.append(linf_edge_core*b)
     a *= 2
     b *= 4
 

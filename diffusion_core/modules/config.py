@@ -19,7 +19,6 @@ class Config:
     """
 
     def __init__(self, config_filename):
-
         self._coupling_on = None
 
         self._config_file_name = None
