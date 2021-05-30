@@ -84,10 +84,12 @@ class Diffusion:
             read_mesh_id = interface.get_mesh_id(config.get_read_mesh_name())
             read_data_id = interface.get_data_id(config.get_read_data_name(), read_mesh_id)
 
-            # Setup write coupling mesh (two mesh widths inside the domain)
+            # Setup write coupling mesh (mutliple layers of polar mesh from interior of domain)
             vertices = []
-            for i in range(ntheta):
-                vertices.append([xpol[i, nrho-3], ypol[i, nrho-3]])
+            write_polar_range = [nrho-4, nrho-3, nrho-2]
+            for j in write_polar_range:
+                for i in range(ntheta):
+                    vertices.append([xpol[i, j], ypol[i, j]])
 
             write_vertex_ids = interface.set_mesh_vertices(interface.get_mesh_id(config.get_write_mesh_name()), vertices)
 
@@ -130,7 +132,7 @@ class Diffusion:
             is_coupling_ongoing = interface.is_coupling_ongoing()
         else:
             is_coupling_ongoing = True
-        
+
         while is_coupling_ongoing:
             if coupling_on:
                 # Read data from preCICE and set fluxes

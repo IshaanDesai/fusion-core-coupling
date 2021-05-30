@@ -51,10 +51,12 @@ class Boundary:
     def get_bnd_vals(self, field):
         bnd_data = []
         # Write data from the interior of the domain (2 mesh widths inside the physical boundary)
-        j = self._nrho - 3
+        #j = self._nrho - 3
+        write_polar_range = [self._nrho-4, self._nrho-3, self._nrho-2]
         # Gets Dirichlet values and returns them for coupling
-        for i in range(self._ntheta):
-            bnd_data.append(field[i, j])
+        for j in write_polar_range:
+            for i in range(self._ntheta):
+                bnd_data.append(field[i, j])
 
         return np.array(bnd_data)
 
