@@ -8,8 +8,8 @@ cimport numpy as np
 cimport cython
 from diffusion_core.modules.output import write_vtk, write_csv, write_custom_csv
 from diffusion_core.modules.config import Config
-from diffusion_core.modules.boundary import Boundary
-from diffusion_core.modules.ansol import Ansol
+from diffusion_core.modules.boundary cimport Boundary
+from diffusion_core.modules.ansol cimport Ansol
 from diffusion_core.modules.mesh import Mesh
 import math
 from time import process_time
@@ -67,7 +67,7 @@ class Diffusion:
         boundary = Boundary(mesh)
 
         # Reset boundary conditions according to analytical solution
-        boundary.set_bnd_vals_ansol(ansol_bessel, u, 0)
+        boundary.set_bnd_vals_ansol(u, ansol_bessel, 0)
 
         if coupling_on:
             # Define coupling interface
@@ -75,8 +75,9 @@ class Diffusion:
             
             # Setup read coupling mesh
             vertices = []
+            j = nrho - 1
             for i in range(ntheta):
-                vertices.append([xpol[i, nrho-1], ypol[i, nrho-1]])
+                vertices.append([xpol[i, j], ypol[i, j]])
 
             read_vertex_ids = interface.set_mesh_vertices(interface.get_mesh_id(config.get_read_mesh_name()), vertices)
 
@@ -120,7 +121,7 @@ class Diffusion:
         self.logger.info("n_t = {}, n_out = {}".format(n_t, n_out))
 
         # Write initial state
-        write_csv("fusion-core", u, mesh, 0)
+        # write_csv("fusion-core", u, mesh, 0)
         write_vtk("fusion-core", u, mesh, 0)
 
         cdef double u_sum
@@ -135,9 +136,12 @@ class Diffusion:
 
         while is_coupling_ongoing:
             if coupling_on:
-                # Read data from preCICE and set fluxes
+                # Read data from preCICE and set fluxes (bi-directional coupling)
                 flux_vals = interface.read_block_scalar_data(read_data_id, read_vertex_ids)
                 boundary.set_bnd_vals_so(u, ansol_bessel, t, flux_vals)
+
+                # Manually set analytical soln at coupling interface (for uni-directional coupling)
+                # boundary.set_bnd_vals_ansol_outer_dir(u, ansol_bessel, t)
 
                 # Update time step
                 dt = min(precice_dt, dt)
@@ -146,72 +150,85 @@ class Diffusion:
             ip = [ntheta-2, ntheta-1, 0, 1]
             for i in range(1, 3):
                 for j in range(1, nrho-1):
+                    # Pre-computing indices for speed-up
+                    ii = ip[i]
+                    i_p = ip[i+1]
+                    i_m = ip[i-1]
+                    j_p = j+1
+                    j_m = j-1
+
                     # Staggered grid for rho-rho diagonal term
-                    du[ip[i], j] = ((jac[ip[i], j+1] + jac[ip[i], j])*(g_rr[ip[i], j+1] + g_rr[ip[i], j])*(u[ip[i], j+1] - u[ip[i], j]) -
-                        (jac[ip[i], j] + jac[ip[i], j-1])*(g_rr[ip[i], j] + g_rr[ip[i], j-1])*(u[ip[i], j] - u[ip[i], j-1])) / (4*drho*drho)
+                    du[ii, j] = ((jac[ii, j_p] + jac[ii, j])*(g_rr[ii, j_p] + g_rr[ii, j])*(u[ii, j_p] - u[ii, j]) -
+                        (jac[ii, j] + jac[ii, j_m])*(g_rr[ii, j] + g_rr[ii, j_m])*(u[ii, j] - u[ii, j_m])) / (4*drho*drho)
 
                     # Staggered grid for theta-theta diagonal term
-                    du[ip[i], j] += ((jac[ip[i+1], j] + jac[ip[i], j])*(g_tt[ip[i+1], j] + g_tt[ip[i], j])*(u[ip[i+1], j] - u[ip[i], j]) -
-                        (jac[ip[i], j] + jac[ip[i-1], j])*(g_tt[ip[i], j] + g_tt[ip[i-1], j])*(u[ip[i], j] - u[ip[i-1], j])) / (4*dtheta*dtheta)
+                    du[ii, j] += ((jac[i_p, j] + jac[ii, j])*(g_tt[i_p, j] + g_tt[ii, j])*(u[i_p, j] - u[ii, j]) -
+                        (jac[ii, j] + jac[i_m, j])*(g_tt[ii, j] + g_tt[i_m, j])*(u[ii, j] - u[i_m, j])) / (4*dtheta*dtheta)
 
                     # Off-diagonal term rho-theta
-                    du[ip[i], j] += (jac[ip[i], j+1]*g_rt[ip[i], j+1]*(u[ip[i+1], j+1] - u[ip[i-1], j+1]) -
-                        jac[ip[i], j-1]*g_rt[ip[i], j-1]*(u[ip[i+1], j-1] - u[ip[i-1], j-1])) / (4*drho*dtheta)
+                    du[ii, j] += (jac[ii, j_p]*g_rt[ii, j_p]*(u[i_p, j_p] - u[i_m, j_p]) -
+                        jac[ii, j_m]*g_rt[ii, j_m]*(u[i_p, j_m] - u[i_m, j_m])) / (4*drho*dtheta)
 
                     # Off-diagonal term theta-rho
-                    du[ip[i], j] += (jac[ip[i+1], j]*g_rt[ip[i+1], j]*(u[ip[i+1], j+1] - u[ip[i+1], j-1]) -
-                        jac[ip[i-1], j]*g_rt[ip[i-1], j]*(u[ip[i-1], j+1] - u[ip[i-1], j-1])) / (4*dtheta*drho)
+                    du[ii, j] += (jac[i_p, j]*g_rt[i_p, j]*(u[i_p, j_p] - u[i_p, j_m]) -
+                        jac[i_m, j]*g_rt[i_m, j]*(u[i_m, j_p] - u[i_m, j_m])) / (4*dtheta*drho)
 
             # Iterate over all grid points
             for i in range(1, ntheta-1):
                 for j in range(1, nrho-1):
+                    # Pre-computing indices for speed-up
+                    i_p = i+1
+                    i_m = i-1
+                    j_p = j+1
+                    j_m = j-1
+
                     # Staggered grid for rho-rho diagonal term
-                    du[i, j] = ((jac[i, j+1] + jac[i, j])*(g_rr[i, j+1] + g_rr[i, j])*(u[i, j+1] - u[i, j]) -
-                        (jac[i, j] + jac[i, j-1])*(g_rr[i, j] + g_rr[i, j-1])*(u[i, j] - u[i, j-1])) / (4*drho*drho)
+                    du[i, j] = ((jac[i, j_p] + jac[i, j])*(g_rr[i, j_p] + g_rr[i, j])*(u[i, j_p] - u[i, j]) -
+                        (jac[i, j] + jac[i, j_m])*(g_rr[i, j] + g_rr[i, j_m])*(u[i, j] - u[i, j_m])) / (4*drho*drho)
 
                     # Staggered grid for theta-theta diagonal term
-                    du[i, j] += ((jac[i+1, j] + jac[i, j])*(g_tt[i+1, j] + g_tt[i, j])*(u[i+1, j] - u[i, j]) -
-                        (jac[i, j] + jac[i-1, j])*(g_tt[i, j] + g_tt[i-1, j])*(u[i, j] - u[i-1, j])) / (4*dtheta*dtheta)
+                    du[i, j] += ((jac[i_p, j] + jac[i, j])*(g_tt[i_p, j] + g_tt[i, j])*(u[i_p, j] - u[i, j]) -
+                        (jac[i, j] + jac[i_m, j])*(g_tt[i, j] + g_tt[i_m, j])*(u[i, j] - u[i_m, j])) / (4*dtheta*dtheta)
 
                     # Off-diagonal term rho-theta
-                    du[i, j] += (jac[i, j+1]*g_rt[i, j+1]*(u[i+1, j+1] - u[i-1, j+1]) -
-                        jac[i, j-1]*g_rt[i, j-1]*(u[i+1, j-1] - u[i-1, j-1])) / (4*drho*dtheta)
+                    du[i, j] += (jac[i, j_p]*g_rt[i, j_p]*(u[i_p, j_p] - u[i_m, j_p]) -
+                        jac[i, j_m]*g_rt[i, j_m]*(u[i_p, j_m] - u[i_m, j_m])) / (4*drho*dtheta)
 
                     # Off-diagonal term theta-rho
-                    du[i, j] += (jac[i+1, j]*g_rt[i+1, j]*(u[i+1, j+1] - u[i+1, j-1]) -
-                        jac[i-1, j]*g_rt[i-1, j]*(u[i-1, j+1] - u[i-1, j-1])) / (4*dtheta*drho)
+                    du[i, j] += (jac[i_p, j]*g_rt[i_p, j]*(u[i_p, j_p] - u[i_p, j_m]) -
+                        jac[i_m, j]*g_rt[i_m, j]*(u[i_m, j_p] - u[i_m, j_m])) / (4*dtheta*drho)
 
             # Update scheme
             for i in range(ntheta):
                 for j in range(nrho):
                     u[i, j] += dt*du[i, j] / jac[i, j]
 
+            # update solution
+            n += 1
+            t += dt
+
             if coupling_on:
                 # Write data to coupling interface preCICE
-                node_vals = boundary.get_bnd_vals(u)
-                interface.write_block_scalar_data(write_data_id, write_vertex_ids, node_vals)
+                # node_vals = boundary.get_bnd_vals(u)
+                # interface.write_block_scalar_data(write_data_id, write_vertex_ids, node_vals)
 
                 # Advance coupling via preCICE
                 precice_dt = interface.advance(dt)
             else:
                 # Set analytical boundary conditions in each iteration
-                boundary.set_bnd_vals_ansol(ansol_bessel, u, (n+1)*dt)
-
-            # update solution
-            n += 1
-            t += dt
+                boundary.set_bnd_vals_ansol(u, ansol_bessel, t)
 
             if n%n_out == 0 or n == n_t:
-                write_csv("fusion-core", u, mesh, n)
+                # write_csv("fusion-core", u, mesh, n)
                 write_vtk("fusion-core", u, mesh, n)
-                self.logger.info('VTK file output written at t = %f', n*dt)
+                self.logger.info('VTK file output written at t = %f', t)
                 u_sum = 0
                 for i in range(ntheta):
                     for j in range(nrho):
                         u_sum += u[i, j]
                         u_err[i, j] = abs(u[i, j] - ansol_bessel.ansol(rho[j], theta[i], t))
 
-                write_csv("error-inf", u_err, mesh, n)
+                # write_csv("error-inf", u_err, mesh, n)
 
                 self.logger.info("Elapsed time = {}  || Field sum = {}".format(n*dt, u_sum/(nrho*ntheta)))
                 self.logger.info("Elapsed CPU time = {}".format(process_time()))
