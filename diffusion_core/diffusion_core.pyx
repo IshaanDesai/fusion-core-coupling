@@ -141,7 +141,7 @@ class Diffusion:
                 boundary.set_bnd_vals_so(u, ansol_bessel, t, flux_vals)
 
                 # Manually set analytical soln at coupling interface (for uni-directional coupling)
-                # boundary.set_bnd_vals_ansol_outer_dir(u, ansol_bessel, t)
+                # boundary.set_bnd_vals_ansol(u, ansol_bessel, t)
 
                 # Update time step
                 dt = min(precice_dt, dt)
