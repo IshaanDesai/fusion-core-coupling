@@ -6,6 +6,7 @@ import math
 import precice
 from pyevtk.hl import gridToVTK
 
+
 def write_vtk(coords, u, n):
     print("Writing VTK output at n = {}".format(n))
     # Other variables for output
@@ -21,7 +22,8 @@ def write_vtk(coords, u, n):
             z_out[i, j, 0] = 0
             u_out[i, j, 0] = u[i, j]
 
-    gridToVTK("./output/"+filename+"_"+str(n), x_out, y_out, z_out, pointData={"value": u_out})
+    gridToVTK("./output/" + filename + "_" + str(n), x_out, y_out, z_out, pointData={"value": u_out})
+
 
 # General
 filename = "diff-cart"
@@ -40,20 +42,20 @@ end_t = 1.0
 t = 0
 n = 0
 
-# Generate a coordinate grid 
+# Generate a grid
 coords = np.zeros((n_x, n_y, 2), dtype=np.double)
 for i in range(n_x):
     for j in range(n_y):
-        coords[i, j, 0] = x_min + i*dx # uniform grid
-        coords[i, j, 1] = y_min + j*dx # uniform grid
+        coords[i, j, 0] = x_min + i * dx  # uniform grid
+        coords[i, j, 1] = y_min + j * dx  # uniform grid
 
 # Field variable having values for which the diffusion problem is solved
 u = np.zeros((n_x, n_y), dtype=np.double)
 du = np.zeros((n_x, n_y), dtype=np.double)
 
 # Initial condition: Fluctuation in center of square plate
-for i in range(int(n_x/2) - 5, int(n_x/2) + 5):
-    for j in range(int(n_y/2) - 5, int(n_y/2) + 5):
+for i in range(int(n_x / 2) - 5, int(n_x / 2) + 5):
+    for j in range(int(n_y / 2) - 5, int(n_y / 2) + 5):
         u[i, j] = 1.0
 
 # Write intial condition
@@ -63,7 +65,7 @@ write_vtk(coords, u, n)
 while t < end_t:
     for i in range(1, n_x - 1):
         for j in range(1, n_y - 1):
-            du[i, j] = (dt*diff_coeff / dx**2)*(u[i-1, j] + u[i+1, j] + u[i, j-1] + u[i, j+1] - 4*u[i, j])
+            du[i, j] = (dt * diff_coeff / dx**2) * (u[i - 1, j] + u[i + 1, j] + u[i, j - 1] + u[i, j + 1] - 4 * u[i, j])
 
     # Update the values for next time step
     for i in range(1, n_x - 1):
@@ -77,5 +79,5 @@ while t < end_t:
     print("t = {}".format(t))
 
     # output
-    if n%100 == 0:
+    if n % 100 == 0:
         write_vtk(coords, u, n)

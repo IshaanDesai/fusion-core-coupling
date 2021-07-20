@@ -9,7 +9,7 @@ import csv
 
 
 def write_vtk(filename, field, mesh, t):
-    filename = filename+"_{}".format(t)
+    filename = filename + "_{}".format(t)
     xpol = mesh.get_x_vals()
     ypol = mesh.get_y_vals()
     nrho = mesh.get_nrho()
@@ -28,7 +28,7 @@ def write_vtk(filename, field, mesh, t):
             z_out[i, j, 0] = 0
             field_out[i, j, 0] = field[i, j]
 
-    gridToVTK("./output/"+filename, x_out, y_out, z_out, pointData={"field": field_out, "type": point_type})
+    gridToVTK("./output/" + filename, x_out, y_out, z_out, pointData={"field": field_out, "type": point_type})
 
 
 def write_csv(filename, field, mesh, n):
@@ -37,7 +37,7 @@ def write_csv(filename, field, mesh, n):
     nrho = mesh.get_nrho()
     ntheta = mesh.get_ntheta()
 
-    with open('./output/'+filename+'_'+str(n)+'.csv', mode='w') as file:
+    with open('./output/' + filename + '_' + str(n) + '.csv', mode='w') as file:
         file_writer = csv.writer(file, delimiter=',')
         for i in range(ntheta):
             for j in range(nrho):
