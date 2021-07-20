@@ -1,162 +1,249 @@
 """
-Code to simulate diffusion in a polar coordinate system replicating a gyrokinetics fusion code (reactor core physics)
+Code to simulate diffusion in a polar coordinate system replicating a gyrokinetics fusion code (reactor core physics).
+Verification with analytical solution obtained using Bessel functions of the first kind
 """
 
 import numpy as np
 cimport numpy as np
 cimport cython
-from diffusion_core.modules.mesh_2d import Mesh, MeshVertexType
-from diffusion_core.modules.output import write_vtk, write_csv
+from diffusion_core.modules.output import write_vtk, write_csv, write_custom_csv
 from diffusion_core.modules.config import Config
-from diffusion_core.modules.boundary import Boundary, BoundaryType
-from diffusion_core.modules.mms cimport MMS
+from diffusion_core.modules.boundary cimport Boundary
+from diffusion_core.modules.ansol cimport Ansol
+from diffusion_core.modules.mesh import Mesh
 import math
-import time
+from time import process_time
 import logging
+import netCDF4 as nc
+import precice
 
 class Diffusion:
     def __init__(self):
         self.logger = logging.getLogger('main.diffusion_core.Diffusion')
-        self._file = None
 
     def solve_diffusion(self):
+        start_time = process_time()
+
         self.logger.info('Solving Diffusion case')
         # Read initial conditions from a JSON config file
-        problem_config_file = "diffusion-coupling-config.json"
-        config = Config(problem_config_file)
+        config = Config("coupling-config.json")
+
+        # Check if the case is coupling or not
+        coupling_on = config.is_coupling_on()
 
         # Iterators
         cdef Py_ssize_t i, j
+        cdef double precice_dt
 
         # Mesh setup
         mesh = Mesh(config)
-        nr, ntheta = config.get_r_points(), config.get_theta_points()
-        rmin, rmax = config.get_rmin(), config.get_rmax()
 
-        # Create MMS module object
-        mms = MMS(config, mesh)
+        cdef double drho = mesh.get_drho()
+        cdef double dtheta = mesh.get_dtheta()
+        nrho, ntheta = mesh.get_nrho(), mesh.get_ntheta()
+        cdef double [::1] rho = mesh.get_rho_vals()
+        cdef double [::1] theta = mesh.get_theta_vals()
+        cdef double [:, ::1] xpol = mesh.get_x_vals()
+        cdef double [:, ::1] ypol = mesh.get_y_vals()
+        cdef double [:, ::1] jac = mesh.get_jacobian()
+        cdef double [:, ::1] g_rr = mesh.get_g_rho_rho()
+        cdef double [:, ::1] g_rt = mesh.get_g_rho_theta()
+        cdef double [:, ::1]  g_tt = mesh.get_g_theta_theta()
 
         # Field variable array
-        u_np = np.zeros((nr, ntheta), dtype=np.double)
-        cdef double [:, ::1] u = u_np
-        # Field delta change array
-        du_perp_np = np.zeros((nr, ntheta), dtype=np.double)
-        cdef double [:, ::1] du_perp = du_perp_np
+        cdef double [:, ::1] u = np.zeros((ntheta, nrho), dtype=np.double)
+        cdef double [:, ::1] du = np.zeros((ntheta, nrho), dtype=np.double)
+        cdef double [:, ::1] u_err = np.zeros((ntheta, nrho), dtype=np.double)
 
-        # Initializing custom initial state (sinosoidal)
-        for l in range(mesh.get_n_points_grid()):
-            mesh_ind = mesh.grid_to_mesh_index(l)
-            radialp = mesh.get_r(mesh_ind)
-            thetap = mesh.get_theta(mesh_ind)
+        # Analytical solution setup
+        ansol_bessel = Ansol(config, mesh)
 
-            i, j = mesh.get_i_j_from_index(mesh_ind)
-            u[i, j] = mms.init_mms(radialp, thetap)
+        # Setting initial state of the field using analytical solution formulation
+        for i in range(ntheta):
+            for j in range(nrho):
+                u[i, j] = ansol_bessel.ansol(rho[j], theta[i], 0)
 
         # Initialize boundary conditions at inner and outer edge of the torus
-        bndvals_wall = np.zeros((mesh.get_n_points_wall()))
-        bnd_wall = Boundary(config, mesh, bndvals_wall, u, BoundaryType.DIRICHLET, MeshVertexType.BC_WALL)
-        bndvals_core = np.zeros((mesh.get_n_points_core()))
-        bnd_core = Boundary(config, mesh, bndvals_core, u, BoundaryType.DIRICHLET, MeshVertexType.BC_CORE)
+        boundary = Boundary(mesh)
 
-        # Reset boundary conditions according to MMS ansatz
-        bnd_wall.set_bnd_vals_mms(u, 0)
-        bnd_core.set_bnd_vals_mms(u, 0)
+        # Reset boundary conditions according to analytical solution
+        boundary.set_bnd_vals_ansol(u, ansol_bessel, 0)
+
+        if coupling_on:
+            # Define coupling interface
+            interface = precice.Interface(config.get_participant_name(), config.get_config_file_name(), 0, 1)
+            
+            # Setup read coupling mesh
+            vertices = []
+            j = nrho - 1
+            for i in range(ntheta):
+                vertices.append([xpol[i, j], ypol[i, j]])
+
+            read_vertex_ids = interface.set_mesh_vertices(interface.get_mesh_id(config.get_read_mesh_name()), vertices)
+
+            # Set up read mesh in preCICE
+            read_mesh_id = interface.get_mesh_id(config.get_read_mesh_name())
+            read_data_id = interface.get_data_id(config.get_read_data_name(), read_mesh_id)
+
+            # Setup write coupling mesh (mutliple layers of polar mesh from interior of domain)
+            vertices = []
+            write_polar_range = [nrho-4, nrho-3, nrho-2]
+            for j in write_polar_range:
+                for i in range(ntheta):
+                    vertices.append([xpol[i, j], ypol[i, j]])
+
+            write_vertex_ids = interface.set_mesh_vertices(interface.get_mesh_id(config.get_write_mesh_name()), vertices)
+
+            # Set up write mesh in preCICE
+            write_mesh_id = interface.get_mesh_id(config.get_write_mesh_name())
+            write_data_id = interface.get_data_id(config.get_write_data_name(), write_mesh_id)
 
         # Get parameters from config and mesh modules
-        diffc_perp = config.get_diffusion_coeff()
-        self.logger.info('Diffusion coefficient = %f', diffc_perp)
         cdef double dt = config.get_dt()
         self.logger.info('dt = %f', dt)
         t_total, t_out = config.get_total_time(), config.get_t_output()
-        cdef int n_t = int(t_total/dt)
-        cdef int n_out = int(t_out/dt)
-
-        cdef double dr = mesh.get_r_spacing()
-        cdef double dtheta = mesh.get_theta_spacing()
-
-        # Calculate radius and theta values at each grid point
-        r_self_np = np.zeros((nr, ntheta), dtype=np.double)
-        cdef double [:, ::1] r_self = r_self_np
-        r_minus_np = np.zeros((nr, ntheta), dtype=np.double)
-        cdef double [:, ::1] r_minus = r_minus_np
-        r_plus_np = np.zeros((nr, ntheta), dtype=np.double)
-        cdef double [:, ::1] r_plus = r_plus_np
-
-        theta_self_np = np.zeros((nr, ntheta), dtype=np.double)
-        cdef double [:, ::1] theta_self = theta_self_np
-
-        for i in range(1, nr - 1):
-            for j in range(ntheta):
-                mesh_ind = mesh.get_index_from_i_j(i, j)
-                ind_minus = mesh.get_index_from_i_j(i - 1, j)
-                ind_plus = mesh.get_index_from_i_j(i + 1, j)
-                # r_(i,j) value
-                r_self[i, j] = mesh.get_r(mesh_ind)
-                # r_(i-1/2,j) value
-                r_minus[i, j] = (mesh.get_r(mesh_ind) + mesh.get_r(ind_minus)) / 2.0
-                # r_(i+1/2,j) value
-                r_plus[i, j] = (mesh.get_r(mesh_ind) + mesh.get_r(ind_plus)) / 2.0
-                # theta_(i,j) value
-                theta_self[i, j] = mesh.get_theta(mesh_ind)
 
         # Check the CFL Condition for Diffusion Equation
-        cfl_r = dt * diffc_perp / (dr * dr)
-        self.logger.info('CFL Coefficient with radial param = %f. Must be less than 0.5', cfl_r)
-        cfl_theta = dt * diffc_perp / (np.mean(r_self) * np.mean(r_self) * dtheta * dtheta)
+        cfl_rho = dt / (drho * drho)
+        self.logger.info('CFL Coefficient with radial param = %f. Must be less than 0.5', cfl_rho)
+        cfl_theta = dt / (np.mean(rho) * np.mean(rho) * dtheta * dtheta)
         self.logger.info('CFL Coefficient with theta param = %f. Must be less than 0.5', cfl_theta)
-        assert (cfl_r < 0.5)
+        assert (cfl_rho < 0.5)
         assert (cfl_theta < 0.5)
 
-        # Time loop
+        if coupling_on:
+            # Initialize preCICE interface
+            precice_dt = interface.initialize()
+            dt = min(precice_dt, dt)
+
+        cdef int n_t = int(t_total/dt)
+        cdef int n_out = int(t_out/dt)
+        self.logger.info("n_t = {}, n_out = {}".format(n_t, n_out))
+
+        # Write initial state
+        # write_csv("fusion-core", u, mesh, 0)
+        write_vtk("fusion-core", u, mesh, 0)
+
         cdef double u_sum
-        for n in range(n_t):
+        # Time loop
+        cdef int n = 0
+        cdef double t = 0.0
+
+        if coupling_on:
+            is_coupling_ongoing = interface.is_coupling_ongoing()
+        else:
+            is_coupling_ongoing = True
+
+        while is_coupling_ongoing:
+            if coupling_on:
+                # Read data from preCICE and set fluxes (bi-directional coupling)
+                flux_vals = interface.read_block_scalar_data(read_data_id, read_vertex_ids)
+                boundary.set_bnd_vals_so(u, ansol_bessel, t, flux_vals)
+
+                # Manually set analytical soln at coupling interface (for uni-directional coupling)
+                # boundary.set_bnd_vals_ansol(u, ansol_bessel, t)
+
+                # Update time step
+                dt = min(precice_dt, dt)
+
             # Assign values to ghost cells for periodicity in theta direction
-            for i in range(1, nr - 1):
-                # Calculating for points theta = 0
-                # Staggered grid scheme to evaluate derivatives in radial direction
-                du_perp[i, 0] = (r_plus[i, 0]*(u[i+1, 0] - u[i, 0]) - r_minus[i, 0]*(u[i, 0] - u[i-1, 0])) / (
-                    r_self[i, 0]*dr*dr)
-                # Second order central difference components in theta direction
-                du_perp[i, 0] += (u[i, ntheta-1] + u[i, 1] - 2*u[i, 0]) / (r_self[i, 0]*r_self[i, 0]*dtheta*dtheta)
+            ip = [ntheta-2, ntheta-1, 0, 1]
+            for i in range(1, 3):
+                for j in range(1, nrho-1):
+                    # Pre-computing indices for speed-up
+                    ii = ip[i]
+                    i_p = ip[i+1]
+                    i_m = ip[i-1]
+                    j_p = j+1
+                    j_m = j-1
 
-                # Calculating for points theta = 2*pi - dtheta
-                # Staggered grid scheme to evaluate derivatives in radial direction
-                du_perp[i, ntheta-1] = (r_plus[i, ntheta-1]*(u[i+1, ntheta-1] - u[i, ntheta-1]) -
-                    r_minus[i, ntheta-1]*(u[i, ntheta-1] - u[i-1, ntheta-1])) / (r_self[i, ntheta-1]*dr*dr)
-                # Second order central difference components in theta direction
-                du_perp[i, ntheta-1] += (u[i, ntheta-2] + u[i, 0] - 2*u[i, ntheta-1]) / (
-                    r_self[i, ntheta-1]*r_self[i, ntheta-1]*dtheta*dtheta)
+                    # Staggered grid for rho-rho diagonal term
+                    du[ii, j] = ((jac[ii, j_p] + jac[ii, j])*(g_rr[ii, j_p] + g_rr[ii, j])*(u[ii, j_p] - u[ii, j]) -
+                        (jac[ii, j] + jac[ii, j_m])*(g_rr[ii, j] + g_rr[ii, j_m])*(u[ii, j] - u[ii, j_m])) / (4*drho*drho)
 
-            # Iterate over all grid points in a Cartesian grid fashion
-            for i in range(1, nr - 1):
-                for j in range(1, ntheta - 1):
-                    # Staggered grid scheme to evaluate derivatives in radial direction
-                    du_perp[i, j] = (r_plus[i, j]*(u[i+1, j] - u[i, j]) - r_minus[i, j]*(u[i, j] - u[i-1, j])) / (
-                               r_self[i, j]*dr*dr)
+                    # Staggered grid for theta-theta diagonal term
+                    du[ii, j] += ((jac[i_p, j] + jac[ii, j])*(g_tt[i_p, j] + g_tt[ii, j])*(u[i_p, j] - u[ii, j]) -
+                        (jac[ii, j] + jac[i_m, j])*(g_tt[ii, j] + g_tt[i_m, j])*(u[ii, j] - u[i_m, j])) / (4*dtheta*dtheta)
 
-                    # Second order central difference components in theta direction
-                    du_perp[i, j] += (u[i, j-1] + u[i, j+1] - 2*u[i, j]) / (r_self[i, j]*r_self[i, j]*dtheta*dtheta)
+                    # Off-diagonal term rho-theta
+                    du[ii, j] += (jac[ii, j_p]*g_rt[ii, j_p]*(u[i_p, j_p] - u[i_m, j_p]) -
+                        jac[ii, j_m]*g_rt[ii, j_m]*(u[i_p, j_m] - u[i_m, j_m])) / (4*drho*dtheta)
+
+                    # Off-diagonal term theta-rho
+                    du[ii, j] += (jac[i_p, j]*g_rt[i_p, j]*(u[i_p, j_p] - u[i_p, j_m]) -
+                        jac[i_m, j]*g_rt[i_m, j]*(u[i_m, j_p] - u[i_m, j_m])) / (4*dtheta*drho)
+
+            # Iterate over all grid points
+            for i in range(1, ntheta-1):
+                for j in range(1, nrho-1):
+                    # Pre-computing indices for speed-up
+                    i_p = i+1
+                    i_m = i-1
+                    j_p = j+1
+                    j_m = j-1
+
+                    # Staggered grid for rho-rho diagonal term
+                    du[i, j] = ((jac[i, j_p] + jac[i, j])*(g_rr[i, j_p] + g_rr[i, j])*(u[i, j_p] - u[i, j]) -
+                        (jac[i, j] + jac[i, j_m])*(g_rr[i, j] + g_rr[i, j_m])*(u[i, j] - u[i, j_m])) / (4*drho*drho)
+
+                    # Staggered grid for theta-theta diagonal term
+                    du[i, j] += ((jac[i_p, j] + jac[i, j])*(g_tt[i_p, j] + g_tt[i, j])*(u[i_p, j] - u[i, j]) -
+                        (jac[i, j] + jac[i_m, j])*(g_tt[i, j] + g_tt[i_m, j])*(u[i, j] - u[i_m, j])) / (4*dtheta*dtheta)
+
+                    # Off-diagonal term rho-theta
+                    du[i, j] += (jac[i, j_p]*g_rt[i, j_p]*(u[i_p, j_p] - u[i_m, j_p]) -
+                        jac[i, j_m]*g_rt[i, j_m]*(u[i_p, j_m] - u[i_m, j_m])) / (4*drho*dtheta)
+
+                    # Off-diagonal term theta-rho
+                    du[i, j] += (jac[i_p, j]*g_rt[i_p, j]*(u[i_p, j_p] - u[i_p, j_m]) -
+                        jac[i_m, j]*g_rt[i_m, j]*(u[i_m, j_p] - u[i_m, j_m])) / (4*dtheta*drho)
 
             # Update scheme
-            for i in range(1, nr - 1):
-                for j in range(ntheta):
-                    u[i, j] += dt*diffc_perp*du_perp[i, j]
+            for i in range(ntheta):
+                for j in range(nrho):
+                    u[i, j] += dt*du[i, j] / jac[i, j]
 
-            # Set Neumann boundary conditions in each iteration
-            bnd_wall.set_bnd_vals_mms(u, n*dt)
-            bnd_core.set_bnd_vals_mms(u, n*dt)
+            # update solution
+            n += 1
+            t += dt
 
-            if n%n_out == 0 or n == n_t-1:
-                write_csv(u, mesh, n+1)
-                write_vtk(u, mesh, n+1)
-                self.logger.info('VTK file output written at t = %f', n*dt)
+            if coupling_on:
+                # Write data to coupling interface preCICE
+                # node_vals = boundary.get_bnd_vals(u)
+                # interface.write_block_scalar_data(write_data_id, write_vertex_ids, node_vals)
+
+                # Advance coupling via preCICE
+                precice_dt = interface.advance(dt)
+            else:
+                # Set analytical boundary conditions in each iteration
+                boundary.set_bnd_vals_ansol(u, ansol_bessel, t)
+
+            if n%n_out == 0 or n == n_t:
+                # write_csv("fusion-core", u, mesh, n)
+                write_vtk("fusion-core", u, mesh, n)
+                self.logger.info('VTK file output written at t = %f', t)
                 u_sum = 0
-                for i in range(nr):
-                    for j in range(0, ntheta):
+                for i in range(ntheta):
+                    for j in range(nrho):
                         u_sum += u[i, j]
+                        u_err[i, j] = abs(u[i, j] - ansol_bessel.ansol(rho[j], theta[i], t))
 
-                self.logger.info("Elapsed time = {}  || Field sum = {}".format(n*dt, u_sum/(nr*ntheta)))
-                self.logger.info("Elapsed CPU time = {}".format(time.clock()))
+                # write_csv("error-inf", u_err, mesh, n)
 
-        self.logger.info("Total CPU time = {}".format(time.clock()))
+                self.logger.info("Elapsed time = {}  || Field sum = {}".format(n*dt, u_sum/(nrho*ntheta)))
+                self.logger.info("Elapsed CPU time = {}".format(process_time()))
+
+                ansol_bessel.compare_ansoln(u, n*dt, self.logger)
+
+            # Simulation time is done
+            if n >= n_t:
+                is_coupling_ongoing = False
+            
+            if coupling_on:
+                is_coupling_ongoing = interface.is_coupling_ongoing()
+
+        if coupling_on:
+            interface.finalize()
+            
+        self.logger.info("Total CPU time = {}".format(process_time()))
         # End

@@ -5,43 +5,47 @@ For the VTK export the following package is used: https://github.com/paulo-herre
 
 from pyevtk.hl import gridToVTK
 import numpy as np
-from .mesh_2d import MeshVertexType
 import csv
 
 
-def write_vtk(field, mesh, t):
-    filename = "field_out_{}".format(t)
-    nr, ntheta = mesh.get_n_points_axiswise()
-    nz = 1
-    x_out = np.zeros((nr, ntheta, nz))
-    y_out = np.zeros((nr, ntheta, nz))
-    z_out = np.zeros((nr, ntheta, nz))
-    point_type = np.zeros((nr, ntheta, nz))
-    field_out = np.zeros((nr, ntheta, nz))
+def write_vtk(filename, field, mesh, t):
+    filename = filename + "_{}".format(t)
+    xpol = mesh.get_x_vals()
+    ypol = mesh.get_y_vals()
+    nrho = mesh.get_nrho()
+    ntheta = mesh.get_ntheta()
 
-    counter = 0
-    for i in range(nr):
-        for j in range(ntheta):
-            x_out[i, j, 0] = mesh.get_x(counter)
-            y_out[i, j, 0] = mesh.get_y(counter)
+    x_out = np.zeros((ntheta, nrho, 1))
+    y_out = np.zeros((ntheta, nrho, 1))
+    z_out = np.zeros((ntheta, nrho, 1))
+    point_type = np.zeros((ntheta, nrho, 1))
+    field_out = np.zeros((ntheta, nrho, 1))
+
+    for i in range(ntheta):
+        for j in range(nrho):
+            x_out[i, j, 0] = xpol[i, j]
+            y_out[i, j, 0] = ypol[i, j]
             z_out[i, j, 0] = 0
-            if mesh.get_point_type(i, j) == MeshVertexType.BC_CORE or mesh.get_point_type(i, j) == MeshVertexType.BC_WALL:
-                point_type[i, j, 0] = 1
-            elif mesh.get_point_type(i, j) == MeshVertexType.GRID:
-                point_type[i, j, 0] = 0
             field_out[i, j, 0] = field[i, j]
-            counter += 1
 
-    gridToVTK("./output/"+filename, x_out, y_out, z_out, pointData={"field": field_out, "type": point_type})
+    gridToVTK("./output/" + filename, x_out, y_out, z_out, pointData={"field": field_out, "type": point_type})
 
 
-def write_csv(field, mesh, n):
-    nr, ntheta = mesh.get_n_points_axiswise()
-    counter = 0
-    with open('./output/polar_'+str(n)+'.csv', mode='w') as file:
+def write_csv(filename, field, mesh, n):
+    xpol = mesh.get_x_vals()
+    ypol = mesh.get_y_vals()
+    nrho = mesh.get_nrho()
+    ntheta = mesh.get_ntheta()
+
+    with open('./output/' + filename + '_' + str(n) + '.csv', mode='w') as file:
         file_writer = csv.writer(file, delimiter=',')
-        for i in range(nr):
-            for j in range(ntheta):
-                file_writer.writerow([mesh.get_x(counter), mesh.get_y(counter), field[i, j]])
-                counter += 1
+        for i in range(ntheta):
+            for j in range(nrho):
+                file_writer.writerow([xpol[i, j], ypol[i, j], field[i, j]])
 
+
+def write_custom_csv(coords):
+    with open('./output/custom.csv', mode='w') as file:
+        file_writer = csv.writer(file, delimiter=',')
+        for coord in coords:
+            file_writer.writerow([coord[0], coord[1]])
