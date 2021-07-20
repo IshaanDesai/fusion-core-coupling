@@ -16,6 +16,7 @@ from time import process_time
 import logging
 import netCDF4 as nc
 import precice
+import argparse
 
 class Diffusion:
     def __init__(self):
@@ -25,8 +26,14 @@ class Diffusion:
         start_time = process_time()
 
         self.logger.info('Solving Diffusion case')
+
+        parser = argparse.ArgumentParser(description="Solving diffusion equation on a polar coordinate system")
+        parser.add_argument('filename', help='a string carrying the JSON config file name')
+
+        args = parser.parse_args()
+
         # Read initial conditions from a JSON config file
-        config = Config("coupling-config.json")
+        config = Config(args.filename)
 
         # Check if the case is coupling or not
         coupling_on = config.is_coupling_on()
