@@ -58,7 +58,6 @@ cdef class Boundary:
     def get_bnd_vals(self, field):
         bnd_data = []
         # Write data from the interior of the domain (2 mesh widths inside the physical boundary)
-        #j = self._nrho - 3
         write_polar_range = [self.nrho-4, self.nrho-3, self.nrho-2]
         # Gets Dirichlet values and returns them for coupling
         for j in write_polar_range:

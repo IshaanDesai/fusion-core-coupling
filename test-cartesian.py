@@ -15,12 +15,14 @@ def write_vtk(coords, u, n):
     z_out = np.zeros((n_x, n_y, 1), dtype=np.double)
     u_out = np.zeros((n_x, n_y, 1), dtype=np.double)
 
+    counter = 0
     for i in range(n_x):
         for j in range(n_x):
-            x_out[i, j, 0] = coords[i, j, 0]
-            y_out[i, j, 0] = coords[i, j, 1]
+            x_out[i, j, 0] = coords[counter][0]
+            y_out[i, j, 0] = coords[counter][1]
             z_out[i, j, 0] = 0
             u_out[i, j, 0] = u[i, j]
+            counter += 1
 
     gridToVTK("./output/" + filename + "_" + str(n), x_out, y_out, z_out, pointData={"value": u_out})
 
@@ -56,7 +58,7 @@ du = np.zeros((n_x, n_y), dtype=np.double)
 if coupling_on:
     # Define coupling interface
     interface = precice.Interface("Test-Cartesian", "test-precice-config.xml", 0, 1)
-            
+
     # Setup coupling mesh
     mesh_id = interface.get_mesh_id("test-cart-mesh")
     vertex_ids = interface.set_mesh_vertices(interface.get_mesh_id("test-cart-mesh"), coords)
@@ -81,7 +83,11 @@ while t < end_t:
         # Read data from preCICE
         u_read = interface.read_block_scalar_data(read_data_id, vertex_ids)
         # Apply the read values to the field
-        u = u_read
+        counter = 0
+        for i in range(n_x):
+            for j in range(n_y):
+                u[i, j] = u_read[counter]
+                counter += 1
 
     for i in range(1, n_x - 1):
         for j in range(1, n_y - 1):

@@ -34,8 +34,8 @@
 
     <coupling-scheme:serial-explicit>
        <participants first="Core-Polar" second="Test-Cartesian"/>
-       <max-time value="0.015"/>
-       <time-window-size value="2.5e-7"/>
+       <max-time value="0.5"/>
+       <time-window-size value="5.0e-4"/>
        <exchange data="value" mesh="test-cart-mesh" from="Core-Polar" to="Test-Cartesian"/>
     </coupling-scheme:serial-explicit>
 

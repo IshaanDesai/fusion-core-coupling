@@ -66,8 +66,8 @@ class Diffusion:
         ansol_bessel = Ansol(config, mesh)
 
         # Setting initial state of the field using analytical solution formulation
-        for i in range(ntheta):
-            for j in range(nrho):
+        for i in range(1, ntheta - 1):
+            for j in range(1, nrho - 1):
                 u[i, j] = ansol_bessel.ansol(rho[j], theta[i], 0)
 
         # Initialize boundary conditions at inner and outer edge of the torus
@@ -82,7 +82,8 @@ class Diffusion:
             
             # Setup write coupling mesh (mutliple layers of polar mesh from interior of domain)
             vertices = []
-            for j in range(nrho):
+            write_polar_range = [nrho-4, nrho-3, nrho-2]
+            for j in write_polar_range:
                 for i in range(ntheta):
                     vertices.append([xpol[i, j], ypol[i, j]])
 
