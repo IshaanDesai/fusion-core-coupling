@@ -34,7 +34,7 @@ n_x = int((x_max - x_min) / dx) + 1
 n_y = int((y_max - y_min) / dx) + 1
 
 # Other physical quantities
-diff_coeff = 1.0
+diff_coeff = 0.01
 dt = 1.0e-3
 end_t = 1.0
 t = 0
