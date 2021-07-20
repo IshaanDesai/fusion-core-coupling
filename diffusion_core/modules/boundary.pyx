@@ -58,9 +58,9 @@ cdef class Boundary:
     def get_bnd_vals(self, field):
         bnd_data = []
         # Write data from the interior of the domain (2 mesh widths inside the physical boundary)
-        write_polar_range = [self.nrho-4, self.nrho-3, self.nrho-2]
+        # write_polar_range = [self.nrho-4, self.nrho-3, self.nrho-2]
         # Gets Dirichlet values and returns them for coupling
-        for j in write_polar_range:
+        for j in range(self.nrho):
             for i in range(self.ntheta):
                 bnd_data.append(field[i, j])
 
@@ -101,3 +101,33 @@ cdef class Boundary:
             field[i, j] = 4 * field[i, j_m] / 3 - field[i, j_mm] / 3 - (self.drho * self.g_rt[i, j]) / (
                 3 * self.dtheta * self.g_rr[i, j]) * (2 * field[i_m, j_m] - 2 * field[i_p, j_m] + field[i_p, j_mm] - field[i_m, j_mm]) + (
                 2 * self.drho) / (3 * math.sqrt(self.g_rr[i, j])) * flux
+
+    def set_bnd_vals_zero(self, field):
+        """
+        Apply Dirichlet boundary condition of value of analytical solution at inner boundary
+        Apply Neumann boundary condition of flux of gradient of analytical solution at outer boundary
+        """
+        # Set the boundary values at the outer edge of the Core domain
+        j = self.nrho - 1
+        j_m = j-1
+        j_mm = j-2
+
+        # Handle periodicity in theta direction due to symmetric stencil
+        ip = [self.ntheta - 2, self.ntheta - 1, 0, 1]
+        for i in range(1, 3):
+            ii = ip[i]
+            i_p = ip[i+1]
+            i_m = ip[i-1]
+            # Dirichlet condition at inner boundary
+            field[ii, 0] = 0.0
+            # Neumann condition at outer boundary (2nd order)
+            field[ii, j] = 0.0
+
+        for i in range(1, self.ntheta - 1):
+            i_p = i+1
+            i_m = i-1
+            i_mm = i-2
+            # Dirichlet condition at inner boundary
+            field[i, 0] = 0.0
+            # Neumann condition at outer boundary (2nd order)
+            field[i, j] = 0.0

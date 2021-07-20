@@ -62,19 +62,22 @@ class Diffusion:
         cdef double [:, ::1] du = np.zeros((ntheta, nrho), dtype=np.double)
         cdef double [:, ::1] u_err = np.zeros((ntheta, nrho), dtype=np.double)
 
-        # Analytical solution setup
-        ansol_bessel = Ansol(config, mesh)
-
-        # Setting initial state of the field using analytical solution formulation
-        for i in range(1, ntheta - 1):
-            for j in range(1, nrho - 1):
-                u[i, j] = ansol_bessel.ansol(rho[j], theta[i], 0)
+        # Initializing gaussian blob
+        xb = 0.0
+        yb = 0.5
+        wxb = 0.2
+        wyb = 0.2
+        for i in range(ntheta):
+            for j in range(nrho):
+                x = xpol[i, j]
+                y = ypol[i, j]
+                gaussx = math.exp(-(x-xb)*(x-xb) / (wxb*wxb))
+                gaussy = math.exp(-(y-yb)*(y-yb) / (wyb*wyb))
+                u[i, j] = gaussx*gaussy
 
         # Initialize boundary conditions at inner and outer edge of the torus
         boundary = Boundary(mesh)
-
-        # Reset boundary conditions according to analytical solution
-        boundary.set_bnd_vals_ansol(u, ansol_bessel, 0)
+        boundary.set_bnd_vals_zero(u)
 
         if coupling_on:
             # Define coupling interface
@@ -82,8 +85,8 @@ class Diffusion:
             
             # Setup write coupling mesh (mutliple layers of polar mesh from interior of domain)
             vertices = []
-            write_polar_range = [nrho-4, nrho-3, nrho-2]
-            for j in write_polar_range:
+            # write_polar_range = [nrho-4, nrho-3, nrho-2]
+            for j in range(nrho):
                 for i in range(ntheta):
                     vertices.append([xpol[i, j], ypol[i, j]])
 
@@ -201,24 +204,20 @@ class Diffusion:
 
                 # Advance coupling via preCICE
                 precice_dt = interface.advance(dt)
-            else:
-                # Set analytical boundary conditions in each iteration
-                boundary.set_bnd_vals_ansol(u, ansol_bessel, t)
+
+            # Set boundary conditions (Dirichlet)
+            boundary.set_bnd_vals_zero(u)
 
             if n%n_out == 0 or n == n_t:
-                # write_csv("fusion-core", u, mesh, n)
                 write_vtk("fusion-core", u, mesh, n)
                 self.logger.info('VTK file output written at t = %f', t)
                 u_sum = 0
                 for i in range(ntheta):
                     for j in range(nrho):
                         u_sum += u[i, j]
-                        u_err[i, j] = abs(u[i, j] - ansol_bessel.ansol(rho[j], theta[i], t))
 
                 self.logger.info("Elapsed time = {}  || Field sum = {}".format(n*dt, u_sum/(nrho*ntheta)))
                 self.logger.info("Elapsed CPU time = {}".format(process_time()))
-
-                ansol_bessel.compare_ansoln(u, n*dt, self.logger)
 
             # Simulation time is done
             if n >= n_t:

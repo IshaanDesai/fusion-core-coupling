@@ -22,7 +22,7 @@
       <use-mesh name="core-polar-mesh" provide="yes"/>
       <use-mesh name="test-cart-mesh" from="Test-Cartesian"/>
       <write-data name="value" mesh="core-polar-mesh"/>
-      <mapping:rbf-thin-plate-splines direction="write" from="core-polar-mesh" to="test-cart-mesh" constraint="consistent"/>
+      <mapping:nearest-neighbor direction="write" from="core-polar-mesh" to="test-cart-mesh" constraint="consistent"/>
     </participant>
     
     <participant name="Test-Cartesian">		
@@ -34,8 +34,8 @@
 
     <coupling-scheme:serial-explicit>
        <participants first="Core-Polar" second="Test-Cartesian"/>
-       <max-time value="0.5"/>
-       <time-window-size value="5.0e-4"/>
+       <max-time value="0.1"/>
+       <time-window-size value="1.0e-5"/>
        <exchange data="value" mesh="test-cart-mesh" from="Core-Polar" to="Test-Cartesian"/>
     </coupling-scheme:serial-explicit>
 

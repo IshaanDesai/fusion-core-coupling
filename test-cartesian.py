@@ -24,26 +24,19 @@ def write_vtk(coords, u, n):
             u_out[i, j, 0] = u[i, j]
             counter += 1
 
-    gridToVTK("./output/" + filename + "_" + str(n), x_out, y_out, z_out, pointData={"value": u_out})
+    gridToVTK("./output/" + filename + "-" + str(n), x_out, y_out, z_out, pointData={"value": u_out})
 
 
 # General
-filename = "diff-cart"
+filename = "test-cart"
 coupling_on = True  # Currently being used for a coupled case. Change to "False" for single physics run
 
 # Geometric quantities
-x_min, x_max = -1.0, 1.0
-y_min, y_max = -1.0, 1.0
+x_min, x_max = -1.2, 1.2
+y_min, y_max = -1.2, 1.2
 dx = 1.0e-1
 n_x = int((x_max - x_min) / dx) + 1
 n_y = int((y_max - y_min) / dx) + 1
-
-# Other physical quantities
-diff_coeff = 1.0
-dt = 1.0e-4
-end_t = 0.5
-t = 0
-n = 0
 
 # Generate a grid
 coords = []
@@ -65,8 +58,15 @@ if coupling_on:
     read_data_id = interface.get_data_id("value", mesh_id)
 
     # Initialize preCICE interface
-    precice_dt = interface.initialize()
-    dt = min(precice_dt, dt)
+    dt = interface.initialize()
+
+# Other physical quantities
+diff_coeff = 1.0
+end_t = 0.1
+t_output = 0.01
+t = 0
+n = 0
+n_out = int(t_output / dt)
 
 # Initial condition: Fluctuation in center of square plate
 # for i in range(int(n_x / 2) - 5, int(n_x / 2) + 5):
@@ -89,25 +89,23 @@ while t < end_t:
                 u[i, j] = u_read[counter]
                 counter += 1
 
-    for i in range(1, n_x - 1):
-        for j in range(1, n_y - 1):
-            du[i, j] = (dt * diff_coeff / dx**2) * (u[i - 1, j] + u[i + 1, j] + u[i, j - 1] + u[i, j + 1] - 4 * u[i, j])
+    # for i in range(1, n_x - 1):
+    #     for j in range(1, n_y - 1):
+    #         du[i, j] = (dt * diff_coeff / dx**2) * (u[i - 1, j] + u[i + 1, j] + u[i, j - 1] + u[i, j + 1] - 4 * u[i, j])
 
-    # Update the values for next time step
-    for i in range(1, n_x - 1):
-        for j in range(1, n_y - 1):
-            u[i, j] += du[i, j]
+    # # Update the values for next time step
+    # for i in range(1, n_x - 1):
+    #     for j in range(1, n_y - 1):
+    #         u[i, j] += du[i, j]
 
     if coupling_on:
         # Advance coupling via preCICE
-        precice_dt = interface.advance(dt)
+        dt = interface.advance(dt)
 
     # Update time
     n += 1
     t += dt
 
-    print("t = {}".format(t))
-
     # output
-    if n == int(0.5 / 1.0e-4):
+    if n % n_out == 0:
         write_vtk(coords, u, n)
