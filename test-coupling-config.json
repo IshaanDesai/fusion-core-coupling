@@ -1,0 +1,23 @@
+{
+  "coupling_on": true,
+  "coupling_params": {
+    "participant_name": "Core-Polar",
+    "config_file_name": "test-precice-config.xml",
+    "read_mesh_name": "None",
+    "write_mesh_name": "core-polar-mesh",
+    "read_data_name": "None",
+    "write_data_name": "value"
+  },
+  "mesh_params": {
+      "file_name": "mesh_files/circular_25_100.nc"
+  },
+  "simulation_params": {
+      "total_time": 0.5,
+      "timestep": 1.0E-4,
+      "t_output": 0.5
+  },
+  "bessel_params": {
+      "pol_mode_number": 2,
+      "ums": 8.4172
+  }
+}

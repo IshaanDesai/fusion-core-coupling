@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+
+<precice-configuration>
+
+    <log>
+	<sink type="stream" output="stdout" filter="%Severity% > debug" enabled="true"/>
+    </log>
+  
+  <solver-interface dimensions="2">
+    
+    <data:scalar name="value"/>
+
+    <mesh name="core-polar-mesh">
+       <use-data name="value"/>
+    </mesh>
+
+    <mesh name="test-cart-mesh">
+       <use-data name="value"/>
+    </mesh>
+    
+    <participant name="Core-Polar">
+      <use-mesh name="core-polar-mesh" provide="yes"/>
+      <use-mesh name="test-cart-mesh" from="Test-Cartesian"/>
+      <write-data name="value" mesh="core-polar-mesh"/>
+      <mapping:rbf-thin-plate-splines direction="write" from="core-polar-mesh" to="test-cart-mesh" constraint="consistent"/>
+    </participant>
+    
+    <participant name="Test-Cartesian">		
+      <use-mesh name="test-cart-mesh" provide="yes"/>
+      <read-data name="value" mesh="test-cart-mesh"/>
+    </participant>
+
+    <m2n:sockets from="Core-Polar" to="Test-Cartesian" />
+
+    <coupling-scheme:serial-explicit>
+       <participants first="Core-Polar" second="Test-Cartesian"/>
+       <max-time value="0.015"/>
+       <time-window-size value="2.5e-7"/>
+       <exchange data="value" mesh="test-cart-mesh" from="Core-Polar" to="Test-Cartesian"/>
+    </coupling-scheme:serial-explicit>
+
+  </solver-interface>
+</precice-configuration>

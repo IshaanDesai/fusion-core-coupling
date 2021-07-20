@@ -3,3 +3,4 @@ rm -fv slurm*
 rm -r -fv precice-run/
 rm -fv output/* 
 rm -fv logfile.log
+rm -fv *-events.json

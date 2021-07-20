@@ -80,22 +80,9 @@ class Diffusion:
             # Define coupling interface
             interface = precice.Interface(config.get_participant_name(), config.get_config_file_name(), 0, 1)
             
-            # Setup read coupling mesh
-            vertices = []
-            j = nrho - 1
-            for i in range(ntheta):
-                vertices.append([xpol[i, j], ypol[i, j]])
-
-            read_vertex_ids = interface.set_mesh_vertices(interface.get_mesh_id(config.get_read_mesh_name()), vertices)
-
-            # Set up read mesh in preCICE
-            read_mesh_id = interface.get_mesh_id(config.get_read_mesh_name())
-            read_data_id = interface.get_data_id(config.get_read_data_name(), read_mesh_id)
-
             # Setup write coupling mesh (mutliple layers of polar mesh from interior of domain)
             vertices = []
-            write_polar_range = [nrho-4, nrho-3, nrho-2]
-            for j in write_polar_range:
+            for j in range(nrho):
                 for i in range(ntheta):
                     vertices.append([xpol[i, j], ypol[i, j]])
 
@@ -128,7 +115,6 @@ class Diffusion:
         self.logger.info("n_t = {}, n_out = {}".format(n_t, n_out))
 
         # Write initial state
-        # write_csv("fusion-core", u, mesh, 0)
         write_vtk("fusion-core", u, mesh, 0)
 
         cdef double u_sum
@@ -143,13 +129,6 @@ class Diffusion:
 
         while is_coupling_ongoing:
             if coupling_on:
-                # Read data from preCICE and set fluxes (bi-directional coupling)
-                flux_vals = interface.read_block_scalar_data(read_data_id, read_vertex_ids)
-                boundary.set_bnd_vals_so(u, ansol_bessel, t, flux_vals)
-
-                # Manually set analytical soln at coupling interface (for uni-directional coupling)
-                # boundary.set_bnd_vals_ansol(u, ansol_bessel, t)
-
                 # Update time step
                 dt = min(precice_dt, dt)
 
@@ -216,8 +195,8 @@ class Diffusion:
 
             if coupling_on:
                 # Write data to coupling interface preCICE
-                # node_vals = boundary.get_bnd_vals(u)
-                # interface.write_block_scalar_data(write_data_id, write_vertex_ids, node_vals)
+                node_vals = boundary.get_bnd_vals(u)
+                interface.write_block_scalar_data(write_data_id, write_vertex_ids, node_vals)
 
                 # Advance coupling via preCICE
                 precice_dt = interface.advance(dt)
@@ -234,8 +213,6 @@ class Diffusion:
                     for j in range(nrho):
                         u_sum += u[i, j]
                         u_err[i, j] = abs(u[i, j] - ansol_bessel.ansol(rho[j], theta[i], t))
-
-                # write_csv("error-inf", u_err, mesh, n)
 
                 self.logger.info("Elapsed time = {}  || Field sum = {}".format(n*dt, u_sum/(nrho*ntheta)))
                 self.logger.info("Elapsed CPU time = {}".format(process_time()))
