@@ -30,13 +30,13 @@ Run serial code on local machine:
 
 ```[bash]
 python3 main.py &
-```bash
+```
 
 The `&` marker at the end will send the program into the background of the terminal. Log of the running program can be checked by: `tail -f logfile.log`
 
 A batch script is available if the code is run on a cluster having SLURM system:
 
-```bash
+```[bash]
 sbatch run_serial.sh
 ```
 
@@ -44,13 +44,13 @@ sbatch run_serial.sh
 
 For running this code on MPCDF clusters most of the Python packages can be loaded by loading `anaconda`:
 
-```bash
+```[bash]
 module load anaconda/3/2019.03
 ```
 
 For VTK output the `pyevtk` module needs to be installed manually:
 
-```bash
+```[bash]
 pip install --user pyevtk
 ```
 
