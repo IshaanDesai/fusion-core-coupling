@@ -74,7 +74,7 @@ class Diffusion:
         boundary = Boundary(mesh)
 
         # Reset boundary conditions according to analytical solution
-        boundary.set_bnd_vals_ansol(u, ansol_bessel, 0)
+        u = boundary.set_bnd_vals_so(u, ansol_bessel, 0)
 
         if coupling_on:
             # Define coupling interface
@@ -145,7 +145,7 @@ class Diffusion:
             if coupling_on:
                 # Read data from preCICE and set fluxes (bi-directional coupling)
                 flux_vals = interface.read_block_scalar_data(read_data_id, read_vertex_ids)
-                boundary.set_bnd_vals_so(u, ansol_bessel, t, flux_vals)
+                u = boundary.set_bnd_vals_so(u, ansol_bessel, t, flux_vals)
 
                 # Manually set analytical soln at coupling interface (for uni-directional coupling)
                 # boundary.set_bnd_vals_ansol(u, ansol_bessel, t)
@@ -223,7 +223,7 @@ class Diffusion:
                 precice_dt = interface.advance(dt)
             else:
                 # Set analytical boundary conditions in each iteration
-                boundary.set_bnd_vals_ansol(u, ansol_bessel, t)
+                u = boundary.set_bnd_vals_so(u, ansol_bessel, t)
 
             if n%n_out == 0 or n == n_t:
                 # write_csv("fusion-core", u, mesh, n)
