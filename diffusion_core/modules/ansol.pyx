@@ -26,16 +26,17 @@ cdef class Ansol:
         return math.sin(self.m * theta) * math.exp(-math.pow(self.ums, 2) * t) * self.ums * (1 / 2) * \
                (special.jv(self.m - 1, self.ums * r) - special.jv(self.m + 1, self.ums * r))
 
-    def compare_ansoln(self, u, t, logger_ansoln):
+    def compare_ansoln(self, u, t, logger):
         del2 = 0
         delinf = 0
+        soln = 0
         for i in range(self.ntheta):
             for j in range(self.nrho):
-                del2 += self.drho * self.dtheta * self.rho[j] * math.pow(
-                    u[i, j] - self.ansol(self.rho[j], self.theta[i], t), 2)
+                del2 += math.pow(u[i, j] - self.ansol(self.rho[j], self.theta[i], t), 2)
+                soln += math.pow(self.ansol(self.rho[j], self.theta[i], t), 2)
                 delinf = max(delinf, abs(u[i, j] - self.ansol(self.rho[j], self.theta[i], t)))
 
-        del2 = math.sqrt(del2)
+        del2 = math.sqrt(del2 / soln)
 
-        logger_ansoln.info("The l2 error between numerical and analytical solution is {}".format(del2))
-        logger_ansoln.info("The l-inf (max) error between numerical and analytical solution is {}".format(delinf))
+        logger.info("The l2 error between numerical and analytical solution is {}".format(del2))
+        logger.info("The l-inf (max) error between numerical and analytical solution is {}".format(delinf))

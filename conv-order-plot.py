@@ -2,7 +2,6 @@
 Convergence plot for error of numerical simulation with analytical solution derived from Bessel functions
 """
 import matplotlib.pyplot as plt
-import numpy as np
 
 # Number of grid points in radial / x- direction
 x_data = [25, 50, 100, 200]

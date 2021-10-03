@@ -9,7 +9,8 @@
 	  "write_data_name": "value"
   },
   "mesh_params": {
-    "file_name": "mesh_files/circular_25_100_coupling.nc"
+    "file_name": "mesh_files/circular_25_100_5dx_coupling.nc",
+    "rho_write": 0.44
   },
   "simulation_params": {
     "total_time": 0.015,

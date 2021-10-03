@@ -71,7 +71,7 @@ class Diffusion:
                 u[i, j] = ansol_bessel.ansol(rho[j], theta[i], 0)
 
         # Initialize boundary conditions at inner and outer edge of the torus
-        boundary = Boundary(mesh)
+        boundary = Boundary(config, mesh)
 
         # Reset boundary conditions according to analytical solution
         u = boundary.set_bnd_vals_so(u, ansol_bessel, 0)
@@ -92,12 +92,15 @@ class Diffusion:
             read_mesh_id = interface.get_mesh_id(config.get_read_mesh_name())
             read_data_id = interface.get_data_id(config.get_read_data_name(), read_mesh_id)
 
-            # Setup write coupling mesh (mutliple layers of polar mesh from interior of domain)
+            # Setup write coupling mesh
             vertices = []
-            write_polar_range = [nrho-4, nrho-3, nrho-2]
-            for j in write_polar_range:
+            rho_write = config.get_rho_write()
+            rho_min = rho_write - 5*drho
+            rho_max = rho_write + 5*drho
+            for j in range(nrho):
                 for i in range(ntheta):
-                    vertices.append([xpol[i, j], ypol[i, j]])
+                    if rho[j] > rho_min and rho[j] < rho_max:
+                        vertices.append([xpol[i, j], ypol[i, j]])
 
             write_vertex_ids = interface.set_mesh_vertices(interface.get_mesh_id(config.get_write_mesh_name()), vertices)
 
@@ -148,7 +151,7 @@ class Diffusion:
                 u = boundary.set_bnd_vals_so(u, ansol_bessel, t, flux_vals)
 
                 # Manually set analytical soln at coupling interface (for uni-directional coupling)
-                # boundary.set_bnd_vals_ansol(u, ansol_bessel, t)
+                # boundary.set_bnd_vals_so(u, ansol_bessel, t)
 
                 # Update time step
                 dt = min(precice_dt, dt)
@@ -216,8 +219,8 @@ class Diffusion:
 
             if coupling_on:
                 # Write data to coupling interface preCICE
-                # node_vals = boundary.get_bnd_vals(u)
-                # interface.write_block_scalar_data(write_data_id, write_vertex_ids, node_vals)
+                node_vals = boundary.get_bnd_vals(u)
+                interface.write_block_scalar_data(write_data_id, write_vertex_ids, node_vals)
 
                 # Advance coupling via preCICE
                 precice_dt = interface.advance(dt)
@@ -241,6 +244,7 @@ class Diffusion:
                 self.logger.info("Elapsed CPU time = {}".format(process_time()))
 
                 ansol_bessel.compare_ansoln(u, n*dt, self.logger)
+                # boundary.compare_bnd_flux_vals(u, ansol_bessel, t, flux_vals, self.logger)
 
             # Simulation time is done
             if n >= n_t:
@@ -248,6 +252,8 @@ class Diffusion:
             
             if coupling_on:
                 is_coupling_ongoing = interface.is_coupling_ongoing()
+            
+            self.logger.info("End of step {}".format(n-1))
 
         if coupling_on:
             interface.finalize()

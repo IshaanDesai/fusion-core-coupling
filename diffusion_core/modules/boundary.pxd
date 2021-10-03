@@ -7,6 +7,7 @@ cimport cython
 import math
 
 cdef class Boundary:
+    cdef double rho_write
     cdef int nrho
     cdef int ntheta
     cdef double drho

@@ -13,7 +13,9 @@ import math
 
 
 cdef class Boundary:
-    def __init__(self, mesh):
+    def __init__(self, config, mesh):
+        self.rho_write = config.get_rho_write()
+
         self.nrho = mesh.get_nrho()
         self.ntheta = mesh.get_ntheta()
         self.drho = mesh.get_drho()
@@ -73,12 +75,28 @@ cdef class Boundary:
 
     def get_bnd_vals(self, field):
         bnd_data = []
-        # Write data from the interior of the domain (2 mesh widths inside the physical boundary)
-        #j = self._nrho - 3
-        write_polar_range = [self.nrho-4, self.nrho-3, self.nrho-2]
         # Gets Dirichlet values and returns them for coupling
-        for j in write_polar_range:
+        rho_min = self.rho_write - 5*self.drho
+        rho_max = self.rho_write + 5*self.drho
+        for j in range(self.nrho):
             for i in range(self.ntheta):
-                bnd_data.append(field[i, j])
+                if self.rho[j] > rho_min and self.rho[j] < rho_max:
+                    bnd_data.append(field[i, j])
 
         return np.array(bnd_data)
+
+    def compare_bnd_flux_vals(self, field, ansol, t, flux, logger):
+        del2 = 0
+        bessel_flux = 0
+
+        # Compare the flux values received at the outer edge of the Core domain with analytical flux values
+        # Pre-compute indices for speed-up
+        j = self.nrho - 1
+
+        for i in range(self.ntheta):
+            del2 += math.pow(flux[i] - ansol.ansol_gradient(self.rho[j], self.theta[i], t), 2)
+            bessel_flux += math.pow(ansol.ansol_gradient(self.rho[j], self.theta[i], t), 2)
+        
+        del2 = math.sqrt(del2 / bessel_flux)
+        
+        logger.info("The l2 error between numerical and analytical solution is {}".format(del2))
