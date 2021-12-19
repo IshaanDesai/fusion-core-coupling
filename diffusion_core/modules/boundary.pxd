@@ -17,3 +17,5 @@ cdef class Boundary:
     cdef double [:, ::1]  g_tt
     cdef double [::1] rho
     cdef double [::1] theta
+    cdef double rho_min
+    cdef double rho_max

@@ -13,18 +13,23 @@ import math
 
 
 cdef class Boundary:
-    def __init__(self, config, mesh):
+    def __init__(self, config, mesh, rho_min, rho_max):
         self.rho_write = config.get_rho_write()
 
         self.nrho = mesh.get_nrho()
         self.ntheta = mesh.get_ntheta()
         self.drho = mesh.get_drho()
         self.dtheta = mesh.get_dtheta()
+
         self.g_rr = mesh.get_g_rho_rho()
         self.g_rt = mesh.get_g_rho_theta()
         self.g_tt = mesh.get_g_theta_theta()
+
         self.rho = mesh.get_rho_vals()
         self.theta = mesh.get_theta_vals()
+        
+        self.rho_min = rho_min
+        self.rho_max = rho_max
 
     def set_bnd_vals_so(self, field, ansol, t, flux=None):
         cdef double [:, ::1] u = field
@@ -75,28 +80,35 @@ cdef class Boundary:
 
     def get_bnd_vals(self, field):
         bnd_data = []
-        # Gets Dirichlet values and returns them for coupling
-        rho_min = self.rho_write - 5*self.drho
-        rho_max = self.rho_write + 5*self.drho
         for j in range(self.nrho):
             for i in range(self.ntheta):
-                if self.rho[j] > rho_min and self.rho[j] < rho_max:
+                if self.rho[j] > self.rho_min and self.rho[j] < self.rho_max:
                     bnd_data.append(field[i, j])
 
         return np.array(bnd_data)
 
-    def compare_bnd_flux_vals(self, field, ansol, t, flux, logger):
-        del2 = 0
-        bessel_flux = 0
+    def get_analytical_bnd_vals(self, ansol, field, t):
+        bnd_data = []
+        for j in range(self.nrho):
+            for i in range(self.ntheta):
+                if self.rho[j] > self.rho_min and self.rho[j] < self.rho_max:
+                    bnd_data.append(ansol.ansol(self.rho[j], self.theta[i], t))
 
+        return np.array(bnd_data)
+
+    def compare_bnd_flux_vals(self, logger, field, ansol, t, fluxes):
+        del2 = 0
+        delinf = 0
         # Compare the flux values received at the outer edge of the Core domain with analytical flux values
-        # Pre-compute indices for speed-up
         j = self.nrho - 1
 
         for i in range(self.ntheta):
-            del2 += math.pow(flux[i] - ansol.ansol_gradient(self.rho[j], self.theta[i], t), 2)
-            bessel_flux += math.pow(ansol.ansol_gradient(self.rho[j], self.theta[i], t), 2)
-        
-        del2 = math.sqrt(del2 / bessel_flux)
-        
-        logger.info("The l2 error between numerical and analytical solution is {}".format(del2))
+            ansol_flux = ansol.ansol_gradient(self.rho[j], self.theta[i], t)
+            del2 += math.pow(fluxes[i] - ansol_flux, 2)
+            delinf = max(delinf, abs(fluxes[i] - ansol_flux))
+
+        # del2 = math.sqrt(del2 / bessel_flux)
+        del2 = math.sqrt(del2) / self.ntheta
+
+        logger.info("Relative l2 error between mapped fluxes and analytical fluxes = {}".format(del2))
+        logger.info("l_inf error between mapped fluxes and analytical fluxes = {}".format(delinf))
