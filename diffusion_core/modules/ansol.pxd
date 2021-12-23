@@ -9,11 +9,6 @@ from scipy import special
 import math
 
 cdef class Ansol:
-    cdef double m
-    cdef double ums
-    cdef int nrho
-    cdef int ntheta
-    cdef double drho
-    cdef double dtheta
-    cdef double [::1] rho
-    cdef double [::1] theta
+    cdef double m, ums, drho, dtheta
+    cdef int nrho, ntheta
+    cdef double [::1] rho, theta

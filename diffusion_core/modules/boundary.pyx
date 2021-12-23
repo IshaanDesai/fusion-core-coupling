@@ -13,8 +13,10 @@ import math
 
 
 cdef class Boundary:
-    def __init__(self, config, mesh, rho_min, rho_max):
-        self.rho_write = config.get_rho_write()
+    def __init__(self, config, mesh, rho_min, rho_max, rho_write):
+        self.rho_min = rho_min
+        self.rho_max = rho_max
+        self.rho_write = rho_write
 
         self.nrho = mesh.get_nrho()
         self.ntheta = mesh.get_ntheta()
@@ -28,9 +30,6 @@ cdef class Boundary:
         self.rho = mesh.get_rho_vals()
         self.theta = mesh.get_theta_vals()
         
-        self.rho_min = rho_min
-        self.rho_max = rho_max
-
     def set_bnd_vals_so(self, field, ansol, t, flux=None):
         cdef double [:, ::1] u = field
         # Set the boundary values at the outer edge of the Core domain
@@ -107,8 +106,7 @@ cdef class Boundary:
             del2 += math.pow(fluxes[i] - ansol_flux, 2)
             delinf = max(delinf, abs(fluxes[i] - ansol_flux))
 
-        # del2 = math.sqrt(del2 / bessel_flux)
-        del2 = math.sqrt(del2) / self.ntheta
+        del2 = math.sqrt(del2 / self.ntheta)
 
         logger.info("Relative l2 error between mapped fluxes and analytical fluxes = {}".format(del2))
         logger.info("l_inf error between mapped fluxes and analytical fluxes = {}".format(delinf))
