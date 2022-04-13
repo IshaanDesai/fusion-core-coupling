@@ -9,13 +9,12 @@
 	  "write_data_name": "value"
   },
   "mesh_params": {
-    "file_name": "mesh_files/circular_25_100_5dx_coupling.nc",
-    "rho_write": 0.44
+    "file_name": "mesh_files/circular_27_164.nc"
   },
   "simulation_params": {
-    "total_time": 0.015,
-    "timestep": 1.6E-5,
-    "t_output": 0.015
+    "timestep": 4.0E-6,
+    "total_time": 4.0E-6,
+    "t_output": 4.0E-6
   },
   "bessel_params": {
     "pol_mode_number": 2,

@@ -74,6 +74,9 @@ class Diffusion:
         rho_write = mesh.get_rhomax() - 5 * drho
         rho_min = rho_write - 5 * drho
         rho_max = rho_write + 5 * drho
+        # Constant overlap
+        #rho_min = rho_write - 0.16
+        #rho_max = rho_write + 0.16
 
         # Initialize boundary conditions at inner and outer edge of the torus
         boundary = Boundary(config, mesh, rho_min, rho_max, rho_write)
@@ -122,13 +125,21 @@ class Diffusion:
         self.logger.info('CFL Coefficient with radial param = %f. Must be less than 0.5', cfl_rho)
         cfl_theta = dt / (np.mean(rho) * np.mean(rho) * dtheta * dtheta)
         self.logger.info('CFL Coefficient with theta param = %f. Must be less than 0.5', cfl_theta)
-        assert (cfl_rho < 0.5)
-        assert (cfl_theta < 0.5)
+        # assert (cfl_rho < 0.5)
+        # assert (cfl_theta < 0.5)
 
         if coupling_on:
             # Initialize preCICE interface
             precice_dt = interface.initialize()
             dt = min(precice_dt, dt)
+
+            if interface.is_action_required(precice.action_write_initial_data()):
+                write_vals = boundary.get_analytical_bnd_vals(ansol_bessel, u, t)
+                interface.write_block_scalar_data(write_data_id, write_vertex_ids, write_vals)
+            
+            interface.mark_action_fulfilled(precice.action_write_initial_data())
+
+            interface.initialize_data()
 
         cdef int n_t = int(t_total/dt)
         cdef int n_out = int(t_out/dt)
@@ -136,7 +147,7 @@ class Diffusion:
 
         # Write initial state
         # write_csv("fusion-core", u, mesh, 0)
-        write_vtk(self.logger, "fusion-core", u, mesh, 0)
+        # write_vtk(self.logger, "fusion-core", u, mesh, 0)
 
         cdef double u_sum
         # Time loop
@@ -154,9 +165,6 @@ class Diffusion:
                 flux_vals = interface.read_block_scalar_data(read_data_id, read_vertex_ids)
                 # u = boundary.set_bnd_vals_so(u, ansol_bessel, t, flux_vals)
                 boundary.compare_bnd_flux_vals(self.logger, u, ansol_bessel, t, flux_vals)
-
-                # Manually set analytical soln at coupling interface (for uni-directional coupling)
-                boundary.set_bnd_vals_so(u, ansol_bessel, t)
 
                 # Update time step
                 dt = min(precice_dt, dt)
@@ -182,17 +190,17 @@ class Diffusion:
 
             if n%n_out == 0 or n == n_t:
                 # write_csv("fusion-core", u, mesh, n)
-                write_vtk(self.logger, "fusion-core", u, mesh, n)
-                # u_sum = 0
-                # for i in range(ntheta):
-                #     for j in range(nrho):
-                #         u_sum += u[i, j]
-                #         u_err[i, j] = abs(u[i, j] - ansol_bessel.ansol(rho[j], theta[i], t))
+                # write_vtk(self.logger, "fusion-core", u, mesh, n)
+                u_sum = 0
+                for i in range(ntheta):
+                    for j in range(nrho):
+                        u_sum += u[i, j]
+                        u_err[i, j] = abs(u[i, j] - ansol_bessel.ansol(rho[j], theta[i], t))
 
                 # write_csv("error-inf", u_err, mesh, n)
 
-                # self.logger.info("Elapsed time = {}  || Field sum = {}".format(n*dt, u_sum/(nrho*ntheta)))
-                # self.logger.info("Elapsed CPU time = {}".format(process_time()))
+                self.logger.info("Elapsed time = {}  || Field sum = {}".format(n*dt, u_sum/(nrho*ntheta)))
+                self.logger.info("Elapsed CPU time = {}".format(process_time()))
 
                 # ansol_bessel.compare_ansoln(u, n*dt, self.logger)
                 # boundary.compare_bnd_flux_vals(u, ansol_bessel, t, flux_vals, self.logger)
@@ -203,8 +211,6 @@ class Diffusion:
             
             if coupling_on:
                 is_coupling_ongoing = interface.is_coupling_ongoing()
-            
-            self.logger.info("End of step {}".format(n-1))
 
         if coupling_on:
             interface.finalize()

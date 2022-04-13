@@ -103,6 +103,7 @@ cdef class Boundary:
 
         for i in range(self.ntheta):
             ansol_flux = ansol.ansol_gradient(self.rho[j], self.theta[i], t)
+            # print("Read flux = {}, ansol_flux = {}".format(fluxes[i], ansol_flux))
             del2 += math.pow(fluxes[i] - ansol_flux, 2)
             delinf = max(delinf, abs(fluxes[i] - ansol_flux))
 
