@@ -13,10 +13,9 @@ import math
 
 
 cdef class Boundary:
-    def __init__(self, config, mesh, rho_min, rho_max, rho_write):
+    def __init__(self, config, mesh, rho_min, rho_max):
         self.rho_min = rho_min
         self.rho_max = rho_max
-        self.rho_write = rho_write
 
         self.nrho = mesh.get_nrho()
         self.ntheta = mesh.get_ntheta()

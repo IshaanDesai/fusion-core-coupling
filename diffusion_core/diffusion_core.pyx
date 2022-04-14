@@ -71,15 +71,11 @@ class Diffusion:
                 u[i, j] = ansol_bessel.ansol(rho[j], theta[i], 0)
 
         # Set rho values
-        rho_write = mesh.get_rhomax() - 5 * drho
-        rho_min = rho_write - 5 * drho
-        rho_max = rho_write + 5 * drho
-        # Constant overlap
-        #rho_min = rho_write - 0.16
-        #rho_max = rho_write + 0.16
+        rho_max = mesh.get_rhomax()
+        rho_min = mesh.get_rhomax() - 2 * drho
 
         # Initialize boundary conditions at inner and outer edge of the torus
-        boundary = Boundary(config, mesh, rho_min, rho_max, rho_write)
+        boundary = Boundary(config, mesh, rho_min, rho_max)
 
         # Reset boundary conditions according to analytical solution
         u = boundary.set_bnd_vals_so(u, ansol_bessel, 0)

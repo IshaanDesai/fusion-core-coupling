@@ -33,7 +33,8 @@
       <use-mesh name="edge_write" from="Edge"/>
       <write-data name="value" mesh="core_write"/>
       <read-data name="flux" mesh="core_read"/>
-      <mapping:rbf-thin-plate-splines direction="read" from="edge_write" to="core_read" constraint="consistent"/>
+      <!--mapping:rbf-compact-tps-c2 direction="read" from="edge_write" to="core_read" constraint="consistent" support-radius="0.04"/-->
+      <mapping:rbf-thin-plate-splines direction="read" from="edge_write" to="core_read" constraint="consistent" use-qr-decomposition="1"/>
       <export:vtk directory="vtk-output" every-n-time-windows="2"/>
     </participant>
     
@@ -43,7 +44,8 @@
       <use-mesh name="core_write" from="Core"/>
       <read-data name="value" mesh="edge_read"/>
       <write-data name="flux" mesh="edge_write"/>
-      <mapping:rbf-thin-plate-splines direction="read" from="core_write" to="edge_read" constraint="consistent"/>
+      <!--mapping:rbf-compact-tps-c2 direction="read" from="core_write" to="edge_read" constraint="consistent" support-radius="0.04"/-->
+      <mapping:rbf-thin-plate-splines direction="read" from="core_write" to="edge_read" constraint="consistent" use-qr-decomposition="1"/>
       <export:vtk directory="vtk-output" every-n-time-windows="2"/>
     </participant>
 
