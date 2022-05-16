@@ -70,12 +70,11 @@ class Diffusion:
             for j in range(nrho):
                 u[i, j] = ansol_bessel.ansol(rho[j], theta[i], 0)
 
-        # Set rho values
-        rho_max = mesh.get_rhomax()
-        rho_min = mesh.get_rhomax() - 2 * drho
+        # Set the rho values of the band from which data is written
+        rho_layers = 3
 
         # Initialize boundary conditions at inner and outer edge of the torus
-        boundary = Boundary(config, mesh, rho_min, rho_max)
+        boundary = Boundary(config, mesh, rho_layers)
 
         # Reset boundary conditions according to analytical solution
         u = boundary.set_bnd_vals_so(u, ansol_bessel, 0)
@@ -101,7 +100,7 @@ class Diffusion:
             vertices = []
             for j in range(nrho):
                 for i in range(ntheta):
-                    if rho[j] > rho_min and rho[j] < rho_max:
+                    if rho[j] > (mesh.get_rhomax() - rho_layers * mesh.get_drho()) and rho[j] < mesh.get_rhomax():
                         vertices.append([xpol[i, j], ypol[i, j]])
 
             self.logger.info('Write mesh has %d vertices', len(vertices))
@@ -115,6 +114,9 @@ class Diffusion:
         cdef double dt = config.get_dt()
         self.logger.info('dt = %f', dt)
         t_total, t_out = config.get_total_time(), config.get_t_output()
+        cdef int n_t = int(t_total/dt)
+        cdef int n_out = int(t_out/dt)
+        self.logger.info("n_t = {}, n_out = {}".format(n_t, n_out))
 
         # Check the CFL Condition for Diffusion Equation
         cfl_rho = dt / (drho * drho)
@@ -123,6 +125,11 @@ class Diffusion:
         self.logger.info('CFL Coefficient with theta param = %f. Must be less than 0.5', cfl_theta)
         # assert (cfl_rho < 0.5)
         # assert (cfl_theta < 0.5)
+
+        cdef double u_sum
+        # Time loop
+        cdef int n = 0
+        cdef double t = 0.0
 
         if coupling_on:
             # Initialize preCICE interface
@@ -137,18 +144,9 @@ class Diffusion:
 
             interface.initialize_data()
 
-        cdef int n_t = int(t_total/dt)
-        cdef int n_out = int(t_out/dt)
-        self.logger.info("n_t = {}, n_out = {}".format(n_t, n_out))
-
         # Write initial state
         # write_csv("fusion-core", u, mesh, 0)
         # write_vtk(self.logger, "fusion-core", u, mesh, 0)
-
-        cdef double u_sum
-        # Time loop
-        cdef int n = 0
-        cdef double t = 0.0
 
         if coupling_on:
             is_coupling_ongoing = interface.is_coupling_ongoing()
