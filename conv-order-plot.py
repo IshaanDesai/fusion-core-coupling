@@ -3,19 +3,26 @@ Convergence plot for error of numerical simulation with analytical solution deri
 """
 import matplotlib.pyplot as plt
 
+dx = [3.2e-2, 1.6e-2, 8e-3, 4e-3, 2e-3, 1e-3, 5e-4]
+
+
 def calculate_baselines(l2, linf):
-    base_val = (l2[0] + linf[0]) / 2
-    n1 = [base_val, base_val / 2, base_val / 4, base_val / 8, base_val / 16]
-    n2 = [base_val, base_val / 4, base_val / 16, base_val / 64, base_val / 256]
+    base_val = (l2[0] + linf[0]) / 2  # Take the midpoint of highest l2 and l_inf error as starting point for baseline
+    n1 = [base_val]
+    n2 = [base_val]
+    for i in range(1, len(dx)):
+        n1.append(base_val / (i * 2))
+        n2.append(base_val / (i * 4))
 
     return n1, n2
 
-def plot_graph(title, n1, n2, l2, linf):
-    # Number of grid points in radial / x- direction
-    dx = [3.2e-2, 1.6e-2, 8e-3, 4e-3, 2e-3]
+
+def plot_graph(title, l2, linf):
+    # Calculate first order and second order baseline plot lines
+    n1, n2 = calculate_baselines(l2, linf)
+
     xi = list(range(len(dx)))
 
-    # Common plot settings
     # plt.xscale('log')
     plt.yscale('log')
     plt.xlabel('dx')
@@ -35,50 +42,74 @@ def plot_graph(title, n1, n2, l2, linf):
     plt.show()
 
 
-# ---- Variable overlap and variable support radius ----
-# Error of mapping flux from Edge to Core
-l2_core = [1.479e-3, 4.434e-4, 1.287e-4, 3.680e-5, 1.461e-5]
-linf_core = [2.553e-3, 7.671e-4, 2.440e-4, 7.280e-5, 2.896e-5]
+case = 'Overlap 5 layers\nRBF mapping tps with compact support'
 
-n1_core, n2_core = calculate_baselines(l2_core, linf_core)
-plot_graph('Mapping Cartesian -> Polar \n variable overlap and variable support radius', n1_core, n2_core, l2_core, linf_core)
+mapping_direction = 'Cartesian -> Polar'
+l2_data = [4.101E-04, 1.476E-04, 4.980E-05, 2.282E-05, 1.256E-05, 5.555E-06, None]
+linf_data = [8.781E-04, 2.773E-04, 1.148E-04, 4.967E-05, 2.794E-05, 1.376E-05, None]
+plot_graph(case + '\n' + mapping_direction, l2_data, linf_data)
 
-# Error of mapping values from Core to Edge
-l2_edge = [3.674e-4, 6.176e-5, 2.476e-5, 1.195e-5, 7.141e-6]
-linf_edge = [6.655e-4, 1.624e-4, 6.689e-5, 3.981e-5, 2.580e-5]
+mapping_direction = 'Polar -> Cartesian'
+l2_data = [1.287E-04, 4.899E-05, 2.393E-05, 1.033E-05, 7.171E-06, 3.788E-06, None]
+linf_data = [2.837E-04, 1.241E-04, 6.859E-05, 2.827E-05, 2.602E-05, 1.468E-05, None]
+plot_graph(case + '\n ' + mapping_direction, l2_data, linf_data)
 
-n1_edge, n2_edge = calculate_baselines(l2_edge, linf_edge)
-plot_graph('Mapping Polar -> Cartesian \n variable overlap and variable support radius', n1_edge, n2_edge, l2_edge, linf_edge)
-# ------------------------------------------------------
+case = 'Overlap 5 layers\nRBF mapping tps with global support solved with QR decomposition'
 
-# ---- Constant overlap and variable support radius ----
-# Error of mapping flux from Edge to Core
-l2_core = [1.479e-3, 3.604e-4, 1.177e-4, 4.386e-5, 1.897e-5]
-linf_core = [2.553e-3, 7.211e-4, 3.002e-4, 1.209e-4, 5.343e-5]
+mapping_direction = 'Cartesian -> Polar'
+l2_data = [3.566E-05, 3.114E-06, 3.240E-07, None, None, None, None]
+linf_data = [6.823E-05, 5.098E-06, 6.596E-07, None, None, None, None]
+plot_graph(case + '\n ' + mapping_direction, l2_data, linf_data)
 
-n1_core, n2_core = calculate_baselines(l2_core, linf_core)
-plot_graph('Mapping Cartesian -> Core \n constant overlap and variable support radius', n1_core, n2_core, l2_core, linf_core)
+mapping_direction = 'Polar -> Cartesian'
+l2_data = [9.028E-06, 2.985E-07, 3.517E-07, 1.819E-08, None, None, None]
+linf_data = [1.827E-05, 1.235E-06, 1.490E-06, 8.258E-08, None, None, None]
+plot_graph(case + '\n ' + mapping_direction, l2_data, linf_data)
 
-# Error of mapping values from Core to Edge
-l2_edge = [3.458e-4, 9.932e-5, 3.393e-5, 1.447e-5, 6.602e-6]
-linf_edge = [6.357e-4, 2.104e-4, 8.119e-5, 3.504e-5, 1.604e-5]
+case = 'Overlap 5 layers\nRBF mapping tps with global support solved with PETSc GMRES'
 
-n1_edge, n2_edge = calculate_baselines(l2_edge, linf_edge)
-plot_graph('Mapping Polar -> Cartesian \n constant overlap and variable support radius', n1_edge, n2_edge, l2_edge, linf_edge)
-# ------------------------------------------------------
+mapping_direction = 'Cartesian -> Polar'
+l2_data = [3.577E-05, 3.114E-06, 1.153E-06, None, None, None, None]
+linf_data = [6.818E-05, 5.098E-06, 4.441E-06, None, None, None, None]
+plot_graph(case + '\n ' + mapping_direction, l2_data, linf_data)
 
-# ---- Variable overlap and global RBF functions ----
-# Error of mapping flux from Edge to Core
-l2_core = [1.719e-3, 5.282e-4, 1.397e-4, 0.0, 0.0]
-linf_core = [2.434e-3, 7.497e-4, 1.987e-4, 0.0, 0.0]
+mapping_direction = 'Polar -> Cartesian'
+l2_data = [9.136E-06, 1.313E-06, 3.517E-07, None, None, None, None]
+linf_data = [1.864E-05, 2.895E-06, 1.490E-06, None, None, None, None]
+plot_graph(case + '\n ' + mapping_direction, l2_data, linf_data)
 
-n1_core, n2_core = calculate_baselines(l2_core, linf_core)
-plot_graph('Mapping Cartesian -> Core \n constant overlap and global RBFs', n1_core, n2_core, l2_core, linf_core)
+case = 'Overlap one layer\nRBF mapping tps with compact support'
 
-# Error of mapping values from Core to Edge
-l2_edge = [2.666e-4, 3.699e-5, 5.425e-6, 0.0, 0.0]
-linf_edge = [4.176e-4, 5.894e-5, 8.301e-6, 0.0, 0.0]
+mapping_direction = 'Cartesian -> Polar'
+l2_data = [7.247E-03, 2.210E-03, 8.441E-04, 3.717E-04, 1.718E-04, 8.320E-05, None]
+linf_data = [2.229E-02, 5.122E-03, 2.829E-03, 1.103E-03, 5.337E-04, 2.628E-04, None]
+plot_graph(case + '\n' + mapping_direction, l2_data, linf_data)
 
-n1_edge, n2_edge = calculate_baselines(l2_edge, linf_edge)
-plot_graph('Mapping Polar -> Cartesian \n constant overlap and global RBFs', n1_edge, n2_edge, l2_edge, linf_edge)
-# ------------------------------------------------------
+mapping_direction = 'Polar -> Cartesian'
+l2_data = [9.536E-04, 1.101E-03, 6.209E-04, 3.224E-04, 1.669E-04, 8.027E-05, None]
+linf_data = [4.149E-03, 4.967E-03, 2.947E-03, 1.654E-03, 8.519E-04, 4.124E-04, None]
+plot_graph(case + '\n ' + mapping_direction, l2_data, linf_data)
+
+case = 'Overlap one layer\nRBF mapping tps with global support solved with QR decomposition'
+
+mapping_direction = 'Cartesian -> Polar'
+l2_data = [2.965E-03, 8.113E-04, 2.021E-04, 5.398E-05, 1.312E-05, None, None]
+linf_data = [6.267E-03, 2.119E-03, 5.363E-04, 1.384E-04, 3.363E-05, None, None]
+plot_graph(case + '\n ' + mapping_direction, l2_data, linf_data)
+
+mapping_direction = 'Polar -> Cartesian'
+l2_data = [4.897E-04, 2.227E-04, 6.417E-05, 1.705E-05, 4.400E-06, None, None]
+linf_data = [1.260E-03, 9.951E-04, 3.018E-04, 8.727E-05, 2.245E-05, None, None]
+plot_graph(case + '\n ' + mapping_direction, l2_data, linf_data)
+
+case = 'Overlap one layer\nRBF mapping tps with global support solved with PETSc GMRES'
+
+mapping_direction = 'Cartesian -> Polar'
+l2_data = [3.360E-03, 9.183E-04, 2.291E-04, 5.925E-05, 2.919E-05, None, None]
+linf_data = [7.136E-03, 2.386E-03, 6.055E-04, 1.426E-04, 5.317E-05, None, None]
+plot_graph(case + '\n ' + mapping_direction, l2_data, linf_data)
+
+mapping_direction = 'Polar -> Cartesian'
+l2_data = [4.522E-04, 2.187E-04, 6.347E-05, 1.691E-05, 4.370E-06, None, None]
+linf_data = [1.864E-05, 2.895E-06, 1.490E-06, None, None, None, None]
+plot_graph(case + '\n ' + mapping_direction, l2_data, linf_data)
