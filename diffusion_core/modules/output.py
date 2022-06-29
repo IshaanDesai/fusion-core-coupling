@@ -8,8 +8,10 @@ import numpy as np
 import csv
 
 
-def write_vtk(filename, field, mesh, t):
-    filename = filename + "_{}".format(t)
+def write_vtk(logger, filename, field, mesh, n):
+    logger.info("Writing VTK file at n = {}".format(n))
+
+    filename = filename + "_{}".format(n)
     xpol = mesh.get_x_vals()
     ypol = mesh.get_y_vals()
     nrho = mesh.get_nrho()
@@ -31,7 +33,9 @@ def write_vtk(filename, field, mesh, t):
     gridToVTK("./output/" + filename, x_out, y_out, z_out, pointData={"field": field_out, "type": point_type})
 
 
-def write_csv(filename, field, mesh, n):
+def write_csv(logger, filename, field, mesh, n):
+    logger.info("Writing CSV file at n = {}".format(n))
+
     xpol = mesh.get_x_vals()
     ypol = mesh.get_y_vals()
     nrho = mesh.get_nrho()

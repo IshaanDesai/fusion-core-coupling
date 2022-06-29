@@ -14,6 +14,7 @@ class Mesh:
         ds = nc.Dataset(path)
 
         self._drho, self._dtheta = ds.getncattr('drho'), ds.getncattr('dtheta')
+        self._rhomax = ds.getncattr('rhopol_max')
         self._nrho, self._ntheta = ds.dimensions['nrho'].size, ds.dimensions['ntheta'].size
 
         self._rho, self._theta = np.array(ds['rho'][:]), np.array(ds['theta'][:])
@@ -57,3 +58,6 @@ class Mesh:
 
     def get_g_theta_theta(self):
         return self._g_tt
+
+    def get_rhomax(self):
+        return self._rhomax

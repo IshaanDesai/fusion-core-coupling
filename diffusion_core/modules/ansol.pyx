@@ -5,7 +5,7 @@ Analytical solution module for the diffusion equation using Bessel functions
 import numpy as np
 cimport numpy as np
 cimport cython
-from scipy import special
+import scipy.special as sp
 import math
 
 
@@ -20,11 +20,10 @@ cdef class Ansol:
         self.drho, self.dtheta = mesh.get_drho(), mesh.get_dtheta()
 
     def ansol(self, r, theta, t):
-        return math.sin(self.m * theta) * special.jv(self.m, self.ums * r) * math.exp(-math.pow(self.ums, 2) * t)
+        return math.sin(self.m * theta) * sp.jv(self.m, self.ums * r) * math.exp(-math.pow(self.ums, 2) * t)
 
     def ansol_gradient(self, r, theta, t):
-        return math.sin(self.m * theta) * math.exp(-math.pow(self.ums, 2) * t) * self.ums * (1 / 2) * \
-               (special.jv(self.m - 1, self.ums * r) - special.jv(self.m + 1, self.ums * r))
+        return math.sin(self.m * theta) * math.exp(-math.pow(self.ums, 2) * t) * self.ums * sp.jvp(self.m, self.ums * r)
 
     def compare_ansoln(self, u, t, logger):
         del2 = 0

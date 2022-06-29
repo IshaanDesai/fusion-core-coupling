@@ -29,7 +29,6 @@ class Config:
         self._write_data_name = None
 
         self._meshfile = None
-        self._rho_write = None
 
         self._dt = None
         self._t_total = None
@@ -63,7 +62,6 @@ class Config:
             self._read_data_name = data["coupling_params"]["read_data_name"]
 
         self._meshfile = data["mesh_params"]["file_name"]
-        self._rho_write = data["mesh_params"]["rho_write"]
 
         self._dt = data["simulation_params"]["timestep"]
         self._t_total = data["simulation_params"]["total_time"]
@@ -94,9 +92,6 @@ class Config:
 
     def get_mesh_file_name(self):
         return self._meshfile
-
-    def get_rho_write(self):
-        return self._rho_write
 
     def get_dt(self):
         return self._dt

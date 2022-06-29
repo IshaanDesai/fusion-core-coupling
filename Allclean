@@ -3,3 +3,6 @@ rm -fv slurm*
 rm -r -fv precice-run/
 rm -fv output/* 
 rm -fv logfile.log
+rm -r -fv build/
+rm -r -fv diffusion_core/*.so diffusion_core/*.c
+rm -r -fv diffusion_core/modules/*.so modules/*.c
